@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, desc, alias } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { usersTable, driverProfilesTable } from "@workspace/db";
+import { usersTable, driverProfilesTable, ridesTable } from "@workspace/db";
 import path from "path";
 import fs from "fs";
 
@@ -96,6 +96,8 @@ router.get("/admin/panel", (_req, res): void => {
     <div class="tab active" onclick="loadTab('pending',this)">Pendentes</div>
     <div class="tab" onclick="loadTab('approved',this)">Aprovados</div>
     <div class="tab" onclick="loadTab('rejected',this)">Rejeitados</div>
+    <div class="tab" onclick="loadTab('rides',this)">Corridas</div>
+    <div class="tab" onclick="loadTab('finance',this)">Financeiro</div>
   </div>
   <div id="content"><div class="empty">Carregando...</div></div>
 </div>
@@ -123,10 +125,59 @@ function doLogin() {
 function loadTab(status, el) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   if (el) el.classList.add("active");
-  else document.querySelectorAll(".tab")[["pending","approved","rejected"].indexOf(status)].classList.add("active");
+  
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = '<div class="empty">Carregando...</div>';
+
+  if (status === 'rides') {
+    fetch("/api/admin/rides", { headers: { "x-admin-password": pwd } })
+      .then(r => r.json())
+      .then(data => renderRides(data.rides ?? []));
+    return;
+  }
+
+  if (status === 'finance') {
+    fetch("/api/admin/finance", { headers: { "x-admin-password": pwd } })
+      .then(r => r.json())
+      .then(data => renderFinance(data));
+    return;
+  }
+
   fetch("/api/admin/drivers?status=" + status, { headers: { "x-admin-password": pwd } })
     .then(r => r.json())
     .then(data => renderCards(data.drivers ?? [], status));
+}
+
+function renderRides(rides) {
+  const el = document.getElementById("content");
+  if (!rides.length) { el.innerHTML = '<div class="empty">Nenhuma corrida encontrada</div>'; return; }
+  el.innerHTML = '<div class="cards">' + rides.map(r => `
+    <div class="card">
+      <div class="card-header">
+        <div><div class="driver-name">#\${r.id} - \${r.passengerName}</div><div class="driver-cpf">\${new Date(r.createdAt).toLocaleString("pt-BR")}</div></div>
+        <span class="status status-\${r.status}">\${r.status}</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-item"><label>Origem</label><span>\${r.originAddress}</span></div>
+        <div class="info-item"><label>Destino</label><span>\${r.destinationAddress}</span></div>
+        <div class="info-item"><label>Motorista</label><span>\${r.driverName || "Não atribuído"}</span></div>
+        <div class="info-item"><label>Valor</label><span style="color:#00FFD4">R$ \${r.estimatedFare}</span></div>
+      </div>
+    </div>
+  `).join("") + '</div>';
+}
+
+function renderFinance(data) {
+  const el = document.getElementById("content");
+  el.innerHTML = \`
+    <div class="info-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Total em Corridas</label><div style="font-size:24px;font-weight:700;color:#00FFD4;margin-top:8px">R$ \${data.totalVolume || '0,00'}</div></div>
+      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Comissão App (15%)</label><div style="font-size:24px;font-weight:700;color:#00C8FF;margin-top:8px">R$ \${data.totalCommission || '0,00'}</div></div>
+      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Saldo Motoristas</label><div style="font-size:24px;font-weight:700;color:#FFB800;margin-top:8px">R$ \${data.totalDriverBalance || '0,00'}</div></div>
+    </div>
+    <div class="section-title">Últimos Pagamentos</div>
+    <div class="empty">Módulo de pagamentos em integração...</div>
+  \`;
 }
 
 function renderCards(drivers, status) {
@@ -259,6 +310,56 @@ router.put("/admin/drivers/:id/reject", requireAdmin, async (req, res): Promise<
     .set({ approvalStatus: "rejected", rejectionReason: reason })
     .where(eq(driverProfilesTable.id, id));
   res.json({ success: true });
+});
+
+router.get("/admin/rides", requireAdmin, async (req, res): Promise<void> => {
+  const passenger = alias(usersTable, "passenger");
+  const driver = alias(usersTable, "driver");
+
+  const rides = await db
+    .select({
+      id: ridesTable.id,
+      status: ridesTable.status,
+      originAddress: ridesTable.originAddress,
+      destinationAddress: ridesTable.destinationAddress,
+      estimatedFare: ridesTable.estimatedFare,
+      createdAt: ridesTable.createdAt,
+      passengerName: passenger.name,
+      driverName: driver.name,
+    })
+    .from(ridesTable)
+    .innerJoin(passenger, eq(ridesTable.passengerId, passenger.id))
+    .leftJoin(driver, eq(ridesTable.driverId, driver.id))
+    .orderBy(desc(ridesTable.createdAt))
+    .limit(50);
+
+  res.json({ rides });
+});
+
+router.get("/admin/finance", requireAdmin, async (req, res): Promise<void> => {
+  const [stats] = await db
+    .select({
+      totalVolume: sql<string>`COALESCE(SUM(CAST(estimated_fare AS NUMERIC)), 0)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(ridesTable)
+    .where(eq(ridesTable.status, "completed"));
+
+  const [driverStats] = await db
+    .select({
+      totalBalance: sql<string>`COALESCE(SUM(CAST(balance AS NUMERIC)), 0)`,
+    })
+    .from(driverProfilesTable);
+
+  const totalVolume = parseFloat(stats?.totalVolume || "0");
+  const commission = totalVolume * 0.15;
+
+  res.json({
+    totalVolume: totalVolume.toFixed(2).replace(".", ","),
+    totalCommission: commission.toFixed(2).replace(".", ","),
+    totalDriverBalance: parseFloat(driverStats?.totalBalance || "0").toFixed(2).replace(".", ","),
+    rideCount: stats?.count || 0,
+  });
 });
 
 export default router;
