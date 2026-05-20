@@ -33,8 +33,19 @@ function calcFare(
   const perKm = Number(category.pricePerKm);
   const perMin = Number(category.pricePerMinute);
   const min = Number(category.minFare);
-  const mult = Number(category.multiplier);
-  const fare = (base + distanceKm * perKm + durationMin * perMin) * mult;
+  
+  // Multiplicador dinâmico baseado no horário (exemplo simples)
+  const hour = new Date().getHours();
+  let dynamicMultiplier = Number(category.multiplier);
+  
+  // Horário de pico: 07-09h e 17-19h
+  if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+    dynamicMultiplier *= 1.4;
+  } else if (hour >= 22 || hour <= 5) {
+    dynamicMultiplier *= 1.2;
+  }
+
+  const fare = (base + distanceKm * perKm + durationMin * perMin) * dynamicMultiplier;
   return Math.max(fare, min);
 }
 
@@ -162,10 +173,33 @@ router.get("/rides", requireAuth, async (req, res): Promise<void> => {
 
   if (role === "driver") {
     if (status === "searching") {
+      // Obter o perfil do motorista para saber as categorias permitidas
+      const [profile] = await db.select().from(driverProfilesTable).where(eq(driverProfilesTable.userId, userId));
+      
+      // Lógica de categorias:
+      // Moto (ID 1) recebe apenas Moto
+      // Básico (ID 2) recebe apenas Básico
+      // Intermediário (ID 3) recebe Básico + Intermediário
+      // VIP (ID 4) recebe Básico + Intermediário + VIP
+      
+      let allowedCategoryIds: number[] = [];
+      const driverCatId = profile?.categoryId || 2; // Default para Básico se não definido
+
+      if (driverCatId === 1) allowedCategoryIds = [1];
+      else if (driverCatId === 2) allowedCategoryIds = [2];
+      else if (driverCatId === 3) allowedCategoryIds = [2, 3];
+      else if (driverCatId === 4) allowedCategoryIds = [2, 3, 4];
+
       allRides = await db
         .select()
         .from(ridesTable)
-        .where(eq(ridesTable.status, "searching"))
+        .where(
+          and(
+            eq(ridesTable.status, "searching"),
+            // Filtro por categorias permitidas (simulado com inArray se disponível, ou lógica manual)
+            or(...allowedCategoryIds.map(id => eq(ridesTable.categoryId, id)))
+          )
+        )
         .orderBy(ridesTable.createdAt);
     } else {
       allRides = await db

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,15 +7,17 @@ import {
   Text,
   TextInput,
   View,
+  Keyboard,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 
 interface Suggestion {
-  place_id: string;
+  id: string;
+  name: string;
   display_name: string;
-  lat: string;
-  lon: string;
+  lat: number;
+  lon: number;
 }
 
 interface Props {
@@ -32,34 +34,59 @@ export function AddressSearch({ placeholder, value, onSelect, icon = "map-pin", 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
+  const searchTimeout = useRef<NodeJS.Timeout>();
 
-  const search = useCallback(async (text: string) => {
+  const search = useCallback((text: string) => {
     setQuery(text);
     if (text.length < 3) {
       setSuggestions([]);
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&countrycodes=br`,
-        { headers: { "Accept-Language": "pt-BR" } }
-      );
-      const data: Suggestion[] = await res.json();
-      setSuggestions(data);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
     }
+
+    setLoading(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        // Usando Photon (mais rápido e inteligente que Nominatim direto)
+        const res = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(text)}&limit=5&lang=pt`
+        );
+        const data = await res.json();
+        
+        const mapped: Suggestion[] = data.features.map((f: any, index: number) => {
+          const props = f.properties;
+          const name = props.name || props.street || "";
+          const city = props.city || props.state || "";
+          const display = [name, props.district, city].filter(Boolean).join(", ");
+          
+          return {
+            id: `${index}-${props.osm_id}`,
+            name: name,
+            display_name: display,
+            lat: f.geometry.coordinates[1],
+            lon: f.geometry.coordinates[0],
+          };
+        });
+
+        setSuggestions(mapped);
+      } catch (err) {
+        console.error("Erro na busca Photon:", err);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 500);
   }, []);
 
   const handleSelect = (item: Suggestion) => {
-    const shortName = item.display_name.split(",").slice(0, 3).join(",").trim();
-    setQuery(shortName);
+    setQuery(item.name);
     setSuggestions([]);
     setFocused(false);
-    onSelect(shortName, parseFloat(item.lat), parseFloat(item.lon));
+    Keyboard.dismiss();
+    onSelect(item.display_name, item.lat, item.lon);
   };
 
   return (
@@ -105,7 +132,7 @@ export function AddressSearch({ placeholder, value, onSelect, icon = "map-pin", 
         >
           <FlatList
             data={suggestions}
-            keyExtractor={(item) => item.place_id}
+            keyExtractor={(item) => item.id}
             scrollEnabled={false}
             renderItem={({ item, index }) => (
               <Pressable
@@ -119,9 +146,14 @@ export function AddressSearch({ placeholder, value, onSelect, icon = "map-pin", 
                 ]}
               >
                 <Feather name="map-pin" size={14} color={colors.mutedForeground} style={{ marginRight: 10 }} />
-                <Text style={[styles.suggestionText, { color: colors.foreground }]} numberOfLines={2}>
-                  {item.display_name.split(",").slice(0, 3).join(",")}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.suggestionName, { color: colors.foreground }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.suggestionText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    {item.display_name}
+                  </Text>
+                </View>
               </Pressable>
             )}
           />
@@ -160,5 +192,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  suggestionText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  suggestionName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  suggestionText: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
 });

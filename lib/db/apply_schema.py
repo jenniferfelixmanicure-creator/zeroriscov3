@@ -25,3 +25,4 @@ try:
     print("Schema atualizado com sucesso!")
 except Exception as e:
     print(f"Erro ao atualizar schema: {e}")
+    "ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id);"

@@ -17,9 +17,11 @@ import { Feather } from "@expo/vector-icons";
 import { AddressSearch } from "@/components/AddressSearch";
 import { PremiumButton } from "@/components/PremiumButton";
 import { GlowView } from "@/components/GlowView";
+import ProfessionalMap from "@/components/ProfessionalMap";
 import { useAuth } from "@/context/AuthContext";
 import { useRide } from "@/context/RideContext";
 import { useColors } from "@/hooks/useColors";
+import { getRoute } from "@/lib/routing";
 
 interface LocationCoords {
   latitude: number;
@@ -30,39 +32,51 @@ interface LocationCoords {
 export default function PassengerHome() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { activeRide } = useRide();
-  const pulse = useRef(new Animated.Value(1)).current;
 
   const [origin, setOrigin] = useState<LocationCoords | null>(null);
   const [originAddress, setOriginAddress] = useState("");
   const [destination, setDestination] = useState<LocationCoords | null>(null);
   const [destinationAddress, setDestinationAddress] = useState("");
+  const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
     getLocation();
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.15, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
   }, []);
+
+  useEffect(() => {
+    if (origin && destination) {
+      updateRoute();
+    } else {
+      setRouteCoords([]);
+    }
+  }, [origin, destination]);
 
   const getLocation = async () => {
     if (Platform.OS === "web") return;
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") return;
+    
     const loc = await Location.getCurrentPositionAsync({});
-    setOrigin({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-    const geocode = await Location.reverseGeocodeAsync(loc.coords);
+    const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    setOrigin(coords);
+    
+    const geocode = await Location.reverseGeocodeAsync(coords);
     if (geocode[0]) {
       const g = geocode[0];
       const addr = `${g.street ?? ""} ${g.streetNumber ?? ""}, ${g.district ?? g.city ?? ""}`.trim();
       setOriginAddress(addr);
+    }
+  };
+
+  const updateRoute = async () => {
+    if (origin && destination) {
+      const route = await getRoute(origin, destination);
+      if (route) {
+        setRouteCoords(route.coordinates);
+      }
     }
   };
 
@@ -86,32 +100,23 @@ export default function PassengerHome() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Background glow */}
-      <LinearGradient
-        colors={["rgba(0,200,255,0.05)", "transparent", "rgba(0,100,238,0.03)"]}
-        style={styles.bgGlow}
-        pointerEvents="none"
-      />
-
-      {/* Map placeholder area */}
-      <View style={[styles.mapArea, { backgroundColor: "#060F1E" }]}>
-        <View style={[styles.mapGrid]} />
-        <Animated.View style={[styles.locationDot, { transform: [{ scale: pulse }] }]}>
-          <View style={[styles.dotInner, { backgroundColor: colors.primary }]} />
-          <View style={[styles.dotRing, { borderColor: colors.primary }]} />
-        </Animated.View>
-        <View style={styles.mapOverlay} pointerEvents="none">
-          <LinearGradient
-            colors={["transparent", colors.background]}
-            style={styles.mapFade}
-            pointerEvents="none"
-          />
-        </View>
+      {/* Mapa Real */}
+      <View style={styles.mapContainer}>
+        <ProfessionalMap
+          origin={origin || undefined}
+          destination={destination || undefined}
+          routeCoordinates={routeCoords}
+        />
+        <LinearGradient
+          colors={["rgba(6,13,26,0.8)", "transparent", "rgba(6,13,26,0.8)"]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
       </View>
 
       <ScrollView
         style={styles.panel}
-        contentContainerStyle={[styles.panelContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.panelContent, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -205,33 +210,13 @@ export default function PassengerHome() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bgGlow: { position: "absolute", inset: 0, zIndex: 0 },
-  mapArea: {
-    height: 260,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+  mapContainer: {
+    height: '50%',
+    width: '100%',
   },
-  mapGrid: {
-    position: "absolute",
-    inset: 0,
-    opacity: 0.15,
-  },
-  mapOverlay: { position: "absolute", inset: 0, bottom: 0 },
-  mapFade: { position: "absolute", bottom: 0, left: 0, right: 0, height: 100 },
-  locationDot: { alignItems: "center", justifyContent: "center" },
-  dotInner: { width: 14, height: 14, borderRadius: 7 },
-  dotRing: {
-    position: "absolute",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    opacity: 0.4,
-  },
-  panel: { flex: 1, marginTop: -20 },
+  panel: { flex: 1, marginTop: -30 },
   panelContent: { paddingHorizontal: 20, gap: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
   greeting: { fontSize: 14, fontFamily: "Inter_400Regular" },
   userName: { fontSize: 22, fontFamily: "Inter_700Bold" },
   avatarBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1 },

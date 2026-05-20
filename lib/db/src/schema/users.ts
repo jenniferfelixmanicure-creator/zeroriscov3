@@ -21,6 +21,7 @@ export const usersTable = pgTable("users", {
 export const driverProfilesTable = pgTable("driver_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => usersTable.id),
+  categoryId: integer("category_id").references(() => categoriesTable.id),
   vehicleModel: text("vehicle_model").notNull().default(""),
   vehiclePlate: text("vehicle_plate").notNull().default(""),
   isOnline: boolean("is_online").notNull().default(false),
