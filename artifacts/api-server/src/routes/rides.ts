@@ -9,6 +9,7 @@ import {
   walletTransactionsTable,
 } from "@workspace/db";
 import { requireAuth, getUser } from "../lib/jwtAuth";
+import { calculateSmartPrice } from "../lib/ai";
 
 const router: IRouter = Router();
 
@@ -101,15 +102,32 @@ router.post("/rides/estimate", requireAuth, async (req, res): Promise<void> => {
 
   const categories = await db.select().from(categoriesTable).orderBy(categoriesTable.id);
 
-  const estimates = categories.map((cat) => ({
-    categoryId: cat.id,
-    categoryName: cat.name,
-    categoryIcon: cat.icon,
-    description: cat.description,
-    estimatedDistance: Math.round(distance * 10) / 10,
-    estimatedDuration: durationMin,
-    estimatedFare: Math.round(calcFare(cat, distance, durationMin) * 100) / 100,
-  }));
+  const estimates = await Promise.all(
+    categories.map(async (cat) => {
+      const baseFare = calcFare(cat, distance, durationMin);
+      
+      // Consultar IA para ajuste dinâmico
+      const smartData = await calculateSmartPrice({
+        distance,
+        duration: durationMin,
+        category: cat.name,
+        weather: "Limpo",
+      });
+
+      const finalFare = smartData?.suggestedPrice || baseFare;
+
+      return {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        categoryIcon: cat.icon,
+        description: cat.description,
+        estimatedDistance: Math.round(distance * 10) / 10,
+        estimatedDuration: durationMin,
+        estimatedFare: Math.round(finalFare * 100) / 100,
+        aiJustification: smartData?.justification || "Tarifa base ZeroRisco",
+      };
+    })
+  );
 
   res.json(estimates);
 });

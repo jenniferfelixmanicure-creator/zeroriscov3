@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { socket } from "@/lib/socket";
 
 interface Message {
   id: number;
@@ -36,8 +37,18 @@ export default function ChatScreen() {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 4000);
-    return () => clearInterval(interval);
+    
+    socket.connect();
+    socket.emit("join_ride", id);
+
+    socket.on("new_message", (msg: Message) => {
+      setMessages(prev => [msg, ...prev]);
+    });
+
+    return () => {
+      socket.off("new_message");
+      socket.disconnect();
+    };
   }, [id]);
 
   const fetchMessages = async () => {
@@ -45,7 +56,10 @@ export default function ChatScreen() {
       const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/messages/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setMessages(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.reverse()); // Inverter para exibir na ordem correta da FlatList
+      }
     } catch {
       // ignore
     }
@@ -55,18 +69,23 @@ export default function ChatScreen() {
     if (!text.trim() || sending) return;
     const content = text.trim();
     setText("");
-    setSending(true);
+    
+    // Enviar via Socket para tempo real e resposta da IA
+    socket.emit("send_message", {
+      rideId: Number(id),
+      senderId: user?.id,
+      text: content
+    });
+
+    // Também salvar no banco via API para histórico
     try {
-      const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/messages/${id}`, {
+      await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/messages/${id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      if (res.ok) fetchMessages();
     } catch {
       // ignore
-    } finally {
-      setSending(false);
     }
   };
 
@@ -116,9 +135,9 @@ export default function ChatScreen() {
                     {
                       backgroundColor: mine
                         ? colors.primary
-                        : colors.card,
+                        : item.senderId === 0 ? colors.primary + '11' : colors.card,
                       borderWidth: 1,
-                      borderColor: mine ? "transparent" : colors.cardBorder,
+                      borderColor: mine ? "transparent" : item.senderId === 0 ? colors.primary + '33' : colors.cardBorder,
                     },
                   ]}
                 >
