@@ -1,11 +1,12 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { eq, and, sql, desc, alias } from "drizzle-orm";
+import { Router, type Request, type Response, type NextFunction } from "express";
+import { eq, and, sql, desc } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@workspace/db";
 import { usersTable, driverProfilesTable, ridesTable } from "@workspace/db";
 import path from "path";
 import fs from "fs";
 
-const router: IRouter = Router();
+const router = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin123";
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -151,33 +152,37 @@ function loadTab(status, el) {
 function renderRides(rides) {
   const el = document.getElementById("content");
   if (!rides.length) { el.innerHTML = '<div class="empty">Nenhuma corrida encontrada</div>'; return; }
-  el.innerHTML = '<div class="cards">' + rides.map(r => `
-    <div class="card">
-      <div class="card-header">
-        <div><div class="driver-name">#\${r.id} - \${r.passengerName}</div><div class="driver-cpf">\${new Date(r.createdAt).toLocaleString("pt-BR")}</div></div>
-        <span class="status status-\${r.status}">\${r.status}</span>
-      </div>
-      <div class="info-grid">
-        <div class="info-item"><label>Origem</label><span>\${r.originAddress}</span></div>
-        <div class="info-item"><label>Destino</label><span>\${r.destinationAddress}</span></div>
-        <div class="info-item"><label>Motorista</label><span>\${r.driverName || "Não atribuído"}</span></div>
-        <div class="info-item"><label>Valor</label><span style="color:#00FFD4">R$ \${r.estimatedFare}</span></div>
-      </div>
-    </div>
-  `).join("") + '</div>';
+  let html = '<div class="cards">';
+  for (const r of rides) {
+    html += '<div class="card">' +
+      '<div class="card-header">' +
+        '<div>' +
+          '<div class="driver-name">#' + r.id + ' - ' + r.passengerName + '</div>' +
+          '<div class="driver-cpf">' + new Date(r.createdAt).toLocaleString("pt-BR") + '</div>' +
+        '</div>' +
+        '<span class="status status-' + r.status + '">' + r.status + '</span>' +
+      '</div>' +
+      '<div class="info-grid">' +
+        '<div class="info-item"><label>Origem</label><span>' + r.originAddress + '</span></div>' +
+        '<div class="info-item"><label>Destino</label><span>' + r.destinationAddress + '</span></div>' +
+        '<div class="info-item"><label>Motorista</label><span>' + (r.driverName || "Não atribuído") + '</span></div>' +
+        '<div class="info-item"><label>Valor</label><span style="color:#00FFD4">R$ ' + r.estimatedFare + '</span></div>' +
+      '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function renderFinance(data) {
   const el = document.getElementById("content");
-  el.innerHTML = \`
-    <div class="info-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
-      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Total em Corridas</label><div style="font-size:24px;font-weight:700;color:#00FFD4;margin-top:8px">R$ \${data.totalVolume || '0,00'}</div></div>
-      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Comissão App (15%)</label><div style="font-size:24px;font-weight:700;color:#00C8FF;margin-top:8px">R$ \${data.totalCommission || '0,00'}</div></div>
-      <div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Saldo Motoristas</label><div style="font-size:24px;font-weight:700;color:#FFB800;margin-top:8px">R$ \${data.totalDriverBalance || '0,00'}</div></div>
-    </div>
-    <div class="section-title">Últimos Pagamentos</div>
-    <div class="empty">Módulo de pagamentos em integração...</div>
-  \`;
+  el.innerHTML = '<div class="info-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">' +
+      '<div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Total em Corridas</label><div style="font-size:24px;font-weight:700;color:#00FFD4;margin-top:8px">R$ ' + (data.totalVolume || '0,00') + '</div></div>' +
+      '<div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Comissão App (15%)</label><div style="font-size:24px;font-weight:700;color:#00C8FF;margin-top:8px">R$ ' + (data.totalCommission || '0,00') + '</div></div>' +
+      '<div class="card" style="text-align:center"><label style="color:#4E7090;font-size:12px">Saldo Motoristas</label><div style="font-size:24px;font-weight:700;color:#FFB800;margin-top:8px">R$ ' + (data.totalDriverBalance || '0,00') + '</div></div>' +
+    '</div>' +
+    '<div class="section-title">Últimos Pagamentos</div>' +
+    '<div class="empty">Módulo de pagamentos em integração...</div>';
 }
 
 function renderCards(drivers, status) {
@@ -189,31 +194,36 @@ function renderCards(drivers, status) {
 function card(d, status) {
   const st = status === "pending" ? "pending" : status === "approved" ? "approved" : "rejected";
   const stLabel = status === "pending" ? "Pendente" : status === "approved" ? "Aprovado" : "Rejeitado";
-  return \`<div class="card" id="card-\${d.driverId}">
-    <div class="card-header">
-      <div><div class="driver-name">\${d.name}</div><div class="driver-cpf">CPF: \${fmtCpf(d.cpf)}</div></div>
-      <span class="status status-\${st}">\${stLabel}</span>
-    </div>
-    <div class="info-grid">
-      <div class="info-item"><label>Telefone</label><span>\${d.phone ?? "-"}</span></div>
-      <div class="info-item"><label>Cadastro</label><span>\${new Date(d.createdAt).toLocaleDateString("pt-BR")}</span></div>
-      <div class="info-item"><label>Veículo</label><span>\${d.vehicleModel || "-"}</span></div>
-      <div class="info-item"><label>Placa</label><span>\${d.vehiclePlate || "-"}</span></div>
-    </div>
-    <div class="docs">
-      \${d.cnhUrl ? \`<div><img class="doc-img" src="\${d.cnhUrl}" onclick="openModal('\${d.cnhUrl}')"/><div class="doc-label">CNH</div></div>\` : '<div style="color:#4E7090;font-size:12px">CNH não enviada</div>'}
-      \${d.crlvUrl ? \`<div><img class="doc-img" src="\${d.crlvUrl}" onclick="openModal('\${d.crlvUrl}')"/><div class="doc-label">CRLV</div></div>\` : '<div style="color:#4E7090;font-size:12px">CRLV não enviado</div>'}
-    </div>
-    \${status === "pending" ? \`
-    <div class="actions">
-      <button class="btn btn-success btn-sm" onclick="approve(\${d.driverId})">Aprovar</button>
-      <div style="flex:1">
-        <button class="btn btn-danger btn-sm" onclick="toggleReject(\${d.driverId})">Rejeitar</button>
-        <input class="reject-input" id="reason-\${d.driverId}" placeholder="Motivo da rejeição (obrigatório)" style="display:none"/>
-        <button class="btn btn-danger btn-sm" id="confirmReject-\${d.driverId}" style="display:none;margin-top:8px" onclick="reject(\${d.driverId})">Confirmar rejeição</button>
-      </div>
-    </div>\` : ""}
-  </div>\`;
+  
+  let actionsHtml = "";
+  if (status === "pending") {
+    actionsHtml = '<div class="actions">' +
+      '<button class="btn btn-success btn-sm" onclick="approve(' + d.driverId + ')">Aprovar</button>' +
+      '<div style="flex:1">' +
+        '<button class="btn btn-danger btn-sm" onclick="toggleReject(' + d.driverId + ')">Rejeitar</button>' +
+        '<input class="reject-input" id="reason-' + d.driverId + '" placeholder="Motivo da rejeição (obrigatório)" style="display:none"/>' +
+        '<button class="btn btn-danger btn-sm" id="confirmReject-' + d.driverId + '" style="display:none;margin-top:8px" onclick="reject(' + d.driverId + ')">Confirmar rejeição</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  return '<div class="card" id="card-' + d.driverId + '">' +
+    '<div class="card-header">' +
+      '<div><div class="driver-name">' + d.name + '</div><div class="driver-cpf">CPF: ' + fmtCpf(d.cpf) + '</div></div>' +
+      '<span class="status status-' + st + '">' + stLabel + '</span>' +
+    '</div>' +
+    '<div class="info-grid">' +
+      '<div class="info-item"><label>Telefone</label><span>' + (d.phone || "-") + '</span></div>' +
+      '<div class="info-item"><label>Cadastro</label><span>' + new Date(d.createdAt).toLocaleDateString("pt-BR") + '</span></div>' +
+      '<div class="info-item"><label>Veículo</label><span>' + (d.vehicleModel || "-") + '</span></div>' +
+      '<div class="info-item"><label>Placa</label><span>' + (d.vehiclePlate || "-") + '</span></div>' +
+    '</div>' +
+    '<div class="docs">' +
+      (d.cnhUrl ? '<div><img class="doc-img" src="' + d.cnhUrl + '" onclick="openModal(\'' + d.cnhUrl + '\')"/><div class="doc-label">CNH</div></div>' : '<div style="color:#4E7090;font-size:12px">CNH não enviada</div>') +
+      (d.crlvUrl ? '<div><img class="doc-img" src="' + d.crlvUrl + '" onclick="openModal(\'' + d.crlvUrl + '\')"/><div class="doc-label">CRLV</div></div>' : '<div style="color:#4E7090;font-size:12px">CRLV não enviado</div>') +
+    '</div>' +
+    actionsHtml +
+  '</div>';
 }
 
 function fmtCpf(c) {
