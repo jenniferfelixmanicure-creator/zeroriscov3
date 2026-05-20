@@ -19,6 +19,7 @@ import { PremiumButton } from "@/components/PremiumButton";
 import { useAuth } from "@/context/AuthContext";
 import { useRide } from "@/context/RideContext";
 import { useColors } from "@/hooks/useColors";
+import { socket } from "@/lib/socket";
 
 interface RideDetail {
   id: number;
@@ -32,6 +33,9 @@ interface RideDetail {
   destinationLng: number;
   estimatedFare: number;
   finalFare?: number | null;
+  passengerId: number;
+  passengerName?: string | null;
+  driverId?: number | null;
   driverName?: string | null;
   driverPhone?: string | null;
   driverRating?: number | null;
@@ -59,26 +63,26 @@ export default function RideDetailScreen() {
   const { clearRide } = useRide();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const pulseAnim = new Animated.Value(1);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchRide();
-    const interval = setInterval(fetchRide, 5000);
-    return () => clearInterval(interval);
-  }, [id]);
+    
+    socket.connect();
+    socket.emit("join", `ride:${id}`);
+    
+    socket.on("ride_updated", (updatedRide: RideDetail) => {
+      setRide(updatedRide);
+      if (updatedRide.status === "completed" || updatedRide.status === "cancelled") {
+        clearRide();
+      }
+    });
 
-  useEffect(() => {
-    if (ride?.status === "searching") {
-      const anim = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.2, duration: 800, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        ])
-      );
-      anim.start();
-      return () => anim.stop();
-    }
-  }, [ride?.status]);
+    return () => {
+      socket.off("ride_updated");
+      socket.disconnect();
+    };
+  }, [id]);
 
   const fetchRide = async () => {
     try {
@@ -99,28 +103,42 @@ export default function RideDetailScreen() {
     }
   };
 
+  const updateStatus = async (newStatus: string) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/rides/${id}/status`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setRide(updated);
+        socket.emit("update_ride", updated);
+      }
+    } catch {
+      Alert.alert("Erro", "Falha ao atualizar status");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleCancel = async () => {
     Alert.alert("Cancelar corrida", "Deseja cancelar esta corrida?", [
       { text: "Não", style: "cancel" },
       {
         text: "Cancelar corrida",
         style: "destructive",
-        onPress: async () => {
-          await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/rides/${id}/status`, {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "cancelled" }),
-          });
-          clearRide();
-          router.replace("/(passenger)");
-        },
+        onPress: () => updateStatus("cancelled"),
       },
     ]);
   };
 
   const openNavigation = (type: "waze" | "gmaps") => {
     if (!ride) return;
-    const { destinationLat: lat, destinationLng: lng } = ride;
+    const lat = ride.status === "accepted" ? ride.originLat : ride.destinationLat;
+    const lng = ride.status === "accepted" ? ride.originLng : ride.destinationLng;
+    
     const url =
       type === "waze"
         ? `waze://?ll=${lat},${lng}&navigate=yes`
@@ -130,12 +148,7 @@ export default function RideDetailScreen() {
     });
   };
 
-  const handleRate = () => {
-    if (ride?.driverName) {
-      router.push(`/rating/${ride.id}`);
-    }
-  };
-
+  const isDriver = user?.role === "driver";
   const config = ride ? (STATUS_CONFIG[ride.status] ?? STATUS_CONFIG.searching) : STATUS_CONFIG.searching;
 
   return (
@@ -162,11 +175,6 @@ export default function RideDetailScreen() {
             <View style={[styles.statusDot, { backgroundColor: config.color }]} />
             <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
           </View>
-          {ride?.status === "searching" && (
-            <Text style={[styles.statusSub, { color: colors.mutedForeground }]}>
-              Aguarde, estamos encontrando um motorista para você...
-            </Text>
-          )}
         </GlowView>
 
         {/* Route */}
@@ -198,81 +206,59 @@ export default function RideDetailScreen() {
           </GlowView>
         )}
 
-        {/* Driver info */}
-        {ride?.driverName && (
+        {/* Driver/Passenger info */}
+        {ride && (
           <GlowView style={styles.driverCard} glowIntensity="low">
             <View style={styles.driverRow}>
               <LinearGradient colors={["#00C8FF", "#0044BB"]} style={styles.driverAvatar}>
                 <Text style={styles.driverAvatarText}>
-                  {ride.driverName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  {(isDriver ? ride.passengerName : ride.driverName || "M")?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </Text>
               </LinearGradient>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.driverName, { color: colors.foreground }]}>{ride.driverName}</Text>
-                <Text style={[styles.driverVehicle, { color: colors.mutedForeground }]}>
-                  {ride.driverVehicle} · {ride.driverPlate}
+                <Text style={[styles.driverName, { color: colors.foreground }]}>
+                  {isDriver ? ride.passengerName : (ride.driverName || "Procurando...")}
                 </Text>
-              </View>
-              <View style={styles.ratingBadge}>
-                <Feather name="star" size={12} color="#FFB800" />
-                <Text style={[styles.ratingText, { color: colors.foreground }]}>
-                  {(ride.driverRating ?? 5).toFixed(1)}
+                <Text style={[styles.driverVehicle, { color: colors.mutedForeground }]}>
+                  {isDriver ? "Passageiro" : (ride.driverVehicle ? `${ride.driverVehicle} · ${ride.driverPlate}` : ride.categoryName)}
                 </Text>
               </View>
             </View>
-
-            {ride.driverPhone && (
-              <View style={styles.contactRow}>
-                <Pressable
-                  onPress={() => Linking.openURL(`tel:${ride.driverPhone}`)}
-                  style={[styles.contactBtn, { backgroundColor: colors.muted }]}
-                >
-                  <Feather name="phone" size={18} color={colors.primary} />
-                </Pressable>
-                <Pressable
-                  onPress={() => router.push(`/chat/${ride.id}`)}
-                  style={[styles.contactBtn, { backgroundColor: colors.muted, flex: 1 }]}
-                >
-                  <Feather name="message-circle" size={18} color={colors.primary} />
-                  <Text style={[styles.contactBtnLabel, { color: colors.primary }]}>Chat</Text>
-                </Pressable>
-              </View>
-            )}
           </GlowView>
         )}
 
-        {/* Navigation buttons */}
-        {ride && ["accepted", "arrived", "in_progress"].includes(ride.status) && (
-          <View style={styles.navButtons}>
-            <PremiumButton
-              title="Waze"
-              variant="secondary"
-              onPress={() => openNavigation("waze")}
-              style={{ flex: 1 }}
-            />
-            <PremiumButton
-              title="Google Maps"
-              variant="secondary"
-              onPress={() => openNavigation("gmaps")}
-              style={{ flex: 1 }}
-            />
+        {/* Driver Actions */}
+        {isDriver && ride && (
+          <View style={{ gap: 10, marginTop: 10 }}>
+            {ride.status === "accepted" && (
+              <PremiumButton title="Cheguei no local" loading={actionLoading} onPress={() => updateStatus("arrived")} />
+            )}
+            {ride.status === "arrived" && (
+              <PremiumButton title="Iniciar corrida" loading={actionLoading} onPress={() => updateStatus("in_progress")} />
+            )}
+            {ride.status === "in_progress" && (
+              <PremiumButton title="Finalizar corrida" loading={actionLoading} onPress={() => updateStatus("completed")} />
+            )}
+            
+            {["accepted", "arrived", "in_progress"].includes(ride.status) && (
+              <View style={styles.navButtons}>
+                <PremiumButton title="Waze" variant="secondary" onPress={() => openNavigation("waze")} style={{ flex: 1 }} />
+                <PremiumButton title="Maps" variant="secondary" onPress={() => openNavigation("gmaps")} style={{ flex: 1 }} />
+              </View>
+            )}
           </View>
         )}
 
-        {/* Actions */}
-        {ride?.status === "searching" && (
+        {/* Passenger Actions */}
+        {!isDriver && ride?.status === "searching" && (
           <PremiumButton title="Cancelar corrida" variant="danger" onPress={handleCancel} />
-        )}
-
-        {ride?.status === "completed" && (
-          <PremiumButton title="Avaliar motorista" onPress={handleRate} />
         )}
 
         {ride?.status === "completed" && (
           <PremiumButton
             title="Voltar ao início"
             variant="ghost"
-            onPress={() => router.replace("/(passenger)")}
+            onPress={() => router.replace(isDriver ? "/(driver)" : "/(passenger)")}
           />
         )}
       </ScrollView>
@@ -292,7 +278,6 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusLabel: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  statusSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 8 },
   routeCard: { padding: 16 },
   routeRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
@@ -308,10 +293,5 @@ const styles = StyleSheet.create({
   driverAvatarText: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" },
   driverName: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
   driverVehicle: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  ratingBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
-  ratingText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  contactRow: { flexDirection: "row", gap: 10 },
-  contactBtn: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6 },
-  contactBtnLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   navButtons: { flexDirection: "row", gap: 10 },
 });

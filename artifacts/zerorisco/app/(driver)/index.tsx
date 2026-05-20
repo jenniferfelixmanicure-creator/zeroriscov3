@@ -16,6 +16,7 @@ import { GlowView } from "@/components/GlowView";
 import { PremiumButton } from "@/components/PremiumButton";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { socket } from "@/lib/socket";
 
 interface RideRequest {
   id: number;
@@ -37,6 +38,24 @@ export default function DriverHome() {
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (user?.id) {
+      socket.connect();
+      socket.emit("join", `driver:${user.id}`);
+      
+      socket.on("new_ride", (ride: RideRequest) => {
+        if (isOnline) {
+          setPendingRides(prev => [ride, ...prev]);
+        }
+      });
+
+      return () => {
+        socket.off("new_ride");
+        socket.disconnect();
+      };
+    }
+  }, [user?.id, isOnline]);
+
+  useEffect(() => {
     if (isOnline) {
       const anim = Animated.loop(
         Animated.sequence([
@@ -46,8 +65,6 @@ export default function DriverHome() {
       );
       anim.start();
       fetchPendingRides();
-      const interval = setInterval(fetchPendingRides, 10000);
-      return () => { anim.stop(); clearInterval(interval); };
     } else {
       glowAnim.setValue(0);
       setPendingRides([]);
@@ -61,7 +78,7 @@ export default function DriverHome() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPendingRides(data.slice(0, 5));
+        setPendingRides(data);
       }
     } catch {
       // ignore
@@ -75,7 +92,14 @@ export default function DriverHome() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ isOnline: val }),
       });
-      if (res.ok) setIsOnline(val);
+      if (res.ok) {
+        setIsOnline(val);
+        if (val) {
+          socket.emit("driver_online", { driverId: user?.id });
+        } else {
+          socket.emit("driver_offline", { driverId: user?.id });
+        }
+      }
     } catch {
       Alert.alert("Erro", "Falha ao atualizar status");
     }
@@ -91,7 +115,6 @@ export default function DriverHome() {
       });
       if (res.ok) {
         setPendingRides((prev) => prev.filter((r) => r.id !== ride.id));
-        Alert.alert("Corrida aceita!", `Indo até ${ride.originAddress}`);
       }
     } catch {
       Alert.alert("Erro", "Falha ao aceitar corrida");
@@ -113,7 +136,6 @@ export default function DriverHome() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         ListHeaderComponent={
           <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16 }}>
-            {/* Online toggle */}
             <GlowView
               style={styles.statusCard}
               glowColor={isOnline ? colors.success : colors.mutedForeground}
@@ -140,7 +162,6 @@ export default function DriverHome() {
               </View>
             </GlowView>
 
-            {/* Today's earnings summary */}
             <View style={styles.earningsRow}>
               {[
                 { label: "Hoje", value: "R$ 0,00", icon: "dollar-sign" as const },
