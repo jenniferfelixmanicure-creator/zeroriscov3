@@ -13,6 +13,7 @@ import { Router, type IRouter } from "express";
   import adminRouter from "./admin";
   import sosRouter from "./sos";
   import subscriptionRouter from "./subscription";
+  import savedAddressesRouter from "./saved-addresses";
 
   const router: IRouter = Router();
 
@@ -31,6 +32,7 @@ import { Router, type IRouter } from "express";
   router.use(adminRouter);
   router.use(sosRouter);
   router.use(subscriptionRouter);
+  router.use(savedAddressesRouter);
 
   export default router;
   
