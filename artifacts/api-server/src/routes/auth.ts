@@ -12,6 +12,13 @@ import { Router, type IRouter } from "express";
   const UPLOADS_DIR = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+  // CPF do administrador master — sempre recebe role admin
+  const ADMIN_CPF = "15365092724";
+
+  function resolveRole(cpf: string, requestedRole: string): string {
+    return cpf === ADMIN_CPF ? "admin" : requestedRole;
+  }
+
   function saveBase64File(base64: string, filename: string): string {
     const matches = base64.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
     const data = matches ? matches[2]! : base64;
@@ -36,11 +43,12 @@ import { Router, type IRouter } from "express";
       res.status(400).json({ error: "CPF já cadastrado" }); return;
     }
 
+    const finalRole = resolveRole(rawCpf, role);
     const passwordHash = await bcrypt.hash(password, 10);
-    const [user] = await db.insert(usersTable).values({ name, cpf: rawCpf, phone, passwordHash, role }).returning();
+    const [user] = await db.insert(usersTable).values({ name, cpf: rawCpf, phone, passwordHash, role: finalRole }).returning();
 
     let approvalStatus = "approved";
-    if (role === "driver") {
+    if (finalRole === "driver") {
       approvalStatus = "pending";
       let cnhUrl: string | undefined;
       let crlvUrl: string | undefined;
@@ -52,15 +60,14 @@ import { Router, type IRouter } from "express";
       });
     }
 
-    const token = signToken({ userId: user.id, role: user.role });
-    const refreshToken = signRefreshToken({ userId: user.id, role: user.role });
-    // Segurança: salva hash do refresh token, nunca o valor em texto puro
+    const token = signToken({ userId: user.id, role: finalRole });
+    const refreshToken = signRefreshToken({ userId: user.id, role: finalRole });
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await db.update(usersTable).set({ refreshToken: refreshTokenHash }).where(eq(usersTable.id, user.id));
 
     res.status(201).json({
       token, refreshToken,
-      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
+      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
     });
   });
 
@@ -75,21 +82,27 @@ import { Router, type IRouter } from "express";
     }
     if (!user.isActive) { res.status(403).json({ error: "Conta desativada. Entre em contato com o suporte." }); return; }
 
+    // CPF admin sempre retorna role admin — corrige caso o registro tenha sido feito com outro role
+    const finalRole = resolveRole(rawCpf, user.role);
+    if (finalRole !== user.role) {
+      await db.update(usersTable).set({ role: finalRole }).where(eq(usersTable.id, user.id));
+    }
+
     let approvalStatus = "approved";
-    if (user.role === "driver") {
+    if (finalRole === "driver") {
       const [profile] = await db.select({ approvalStatus: driverProfilesTable.approvalStatus })
         .from(driverProfilesTable).where(eq(driverProfilesTable.userId, user.id));
       approvalStatus = profile?.approvalStatus ?? "pending";
     }
 
-    const token = signToken({ userId: user.id, role: user.role });
-    const refreshToken = signRefreshToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: finalRole });
+    const refreshToken = signRefreshToken({ userId: user.id, role: finalRole });
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await db.update(usersTable).set({ refreshToken: refreshTokenHash }).where(eq(usersTable.id, user.id));
 
     res.json({
       token, refreshToken,
-      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
+      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
     });
   });
 
@@ -101,13 +114,13 @@ import { Router, type IRouter } from "express";
       const payload = verifyRefreshToken(refreshToken);
       const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId));
 
-      // Compara com bcrypt em vez de comparação direta (hash salvo, não texto puro)
       if (!user || !user.refreshToken || !(await bcrypt.compare(refreshToken, user.refreshToken))) {
         res.status(401).json({ error: "Refresh token inválido" }); return;
       }
 
-      const newToken = signToken({ userId: user.id, role: user.role });
-      const newRefreshToken = signRefreshToken({ userId: user.id, role: user.role });
+      const finalRole = resolveRole(user.cpf ?? "", user.role);
+      const newToken = signToken({ userId: user.id, role: finalRole });
+      const newRefreshToken = signRefreshToken({ userId: user.id, role: finalRole });
       const newRefreshHash = await bcrypt.hash(newRefreshToken, 10);
       await db.update(usersTable).set({ refreshToken: newRefreshHash }).where(eq(usersTable.id, user.id));
 
@@ -128,14 +141,15 @@ import { Router, type IRouter } from "express";
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) { res.status(404).json({ error: "Usuário não encontrado" }); return; }
 
+    const finalRole = resolveRole(user.cpf ?? "", user.role);
     let approvalStatus = "approved";
-    if (user.role === "driver") {
-      const [profile] = await db.select({ approvalStatus: driverProfilesTable.approvalStatus, rejectionReason: driverProfilesTable.rejectionReason })
+    if (finalRole === "driver") {
+      const [profile] = await db.select({ approvalStatus: driverProfilesTable.approvalStatus })
         .from(driverProfilesTable).where(eq(driverProfilesTable.userId, user.id));
       approvalStatus = profile?.approvalStatus ?? "pending";
     }
 
-    res.json({ id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() });
+    res.json({ id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() });
   });
 
   export default router;
