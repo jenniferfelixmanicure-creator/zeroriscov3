@@ -12,7 +12,10 @@ commands = [
     "ALTER TABLE users ALTER COLUMN phone DROP NOT EXISTS;",
     "ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
     "ALTER TABLE rides ADD COLUMN IF NOT EXISTS verification_pin TEXT;",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(10, 2) DEFAULT 0.00;"
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(10, 2) DEFAULT 0.00;",
+    "ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';",
+    "ALTER TABLE driver_profiles ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;",
+    "ALTER TABLE driver_profiles DROP COLUMN IF EXISTS balance;"
 ]
 
 try:

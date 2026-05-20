@@ -16,4 +16,9 @@ Como você já criou o serviço de backend no Render, certifique-se de configura
 2. **Start Command**: `pnpm start`
 3. **Root Directory**: `artifacts/api-server` (Certifique-se de apontar para a pasta do backend se o Render pedir)
 
+## Modelo de Negócio (ZeroRisco):
+- **Mensalidade Motorista**: R$ 80,00 fixos.
+- **Comissão**: 0% (Pagamento 100% direto ao motorista em Dinheiro/PIX).
+- **IA ZeroRisco**: Gerencia precificação e suporte no chat.
+
 O Socket.IO já está configurado para rodar na mesma porta do servidor HTTP, então o tempo real deve funcionar assim que o deploy for concluído.

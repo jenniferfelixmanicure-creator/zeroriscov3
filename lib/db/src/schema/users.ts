@@ -28,7 +28,8 @@ export const driverProfilesTable = pgTable("driver_profiles", {
   isOnline: boolean("is_online").notNull().default(false),
   rating: numeric("rating", { precision: 3, scale: 2 }).notNull().default("5.00"),
   totalRides: integer("total_rides").notNull().default(0),
-  balance: numeric("balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  subscriptionStatus: text("subscription_status").notNull().default("inactive"), // active | inactive | trial
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
   approvalStatus: text("approval_status").notNull().default("pending"), // pending | approved | rejected
   cnhUrl: text("cnh_url"),
   crlvUrl: text("crlv_url"),

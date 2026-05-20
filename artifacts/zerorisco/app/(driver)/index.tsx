@@ -163,17 +163,18 @@ export default function DriverHome() {
             </GlowView>
 
             <View style={styles.earningsRow}>
-              {[
-                { label: "Hoje", value: "R$ 0,00", icon: "dollar-sign" as const },
-                { label: "Corridas", value: "0", icon: "navigation" as const },
-                { label: "Avaliação", value: "5.0", icon: "star" as const },
-              ].map((stat) => (
-                <GlowView key={stat.label} style={styles.statCard} glowIntensity="low">
-                  <Feather name={stat.icon} size={16} color={colors.primary} />
-                  <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
-                  <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-                </GlowView>
-              ))}
+              <GlowView style={[styles.statCard, { flex: 2 }]} glowIntensity="low">
+                <Feather name="calendar" size={16} color={colors.primary} />
+                <Text style={[styles.statValue, { color: colors.foreground }]}>
+                  {user?.subscriptionStatus === 'active' ? 'Assinatura Ativa' : 'Assinatura Pendente'}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Mensalidade R$ 80,00</Text>
+              </GlowView>
+              <GlowView style={styles.statCard} glowIntensity="low">
+                <Feather name="star" size={16} color="#FFB800" />
+                <Text style={[styles.statValue, { color: colors.foreground }]}>5.0</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Avaliação</Text>
+              </GlowView>
             </View>
 
             {isOnline && (
