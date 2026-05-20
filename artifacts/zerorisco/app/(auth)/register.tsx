@@ -155,7 +155,7 @@ export default function RegisterScreen() {
         Alert.alert("Erro", data.error ?? "Falha no cadastro");
         return;
       }
-      await login(data.token, data.user);
+      await login(data.token, data.refreshToken, data.user);
       if (role === "driver") {
         router.replace("/(driver)/pending");
       } else {
