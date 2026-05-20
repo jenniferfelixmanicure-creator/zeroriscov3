@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
@@ -15,7 +14,9 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
   console.log("Iniciando esbuild para o backend...");
 
-  await esbuild({
+  const { build: esbuildBuild } = await import("esbuild");
+
+  await esbuildBuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
     bundle: true,
