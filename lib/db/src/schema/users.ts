@@ -1,6 +1,7 @@
 import { pgTable, serial, integer, text, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
   import { createInsertSchema } from "drizzle-zod";
   import { z } from "zod/v4";
+  import { categoriesTable } from "./categories";
 
   export const usersTable = pgTable("users", {
     id: serial("id").primaryKey(),
@@ -19,9 +20,6 @@ import { pgTable, serial, integer, text, boolean, timestamp, numeric } from "dri
     walletBalance: numeric("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   });
-
-  // Referência circular — categoriesTable é importada pelo schema principal
-  import { categoriesTable } from "./categories";
 
   export const driverProfilesTable = pgTable("driver_profiles", {
     id: serial("id").primaryKey(),
