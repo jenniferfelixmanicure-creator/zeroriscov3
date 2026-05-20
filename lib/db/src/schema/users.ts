@@ -15,6 +15,7 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("passenger"), // passenger | driver | admin
   avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").notNull().default(true),
+  walletBalance: numeric("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

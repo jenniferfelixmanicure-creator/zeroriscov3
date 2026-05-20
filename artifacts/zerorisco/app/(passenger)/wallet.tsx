@@ -1,51 +1,50 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { GlowView } from "@/components/GlowView";
+import { PremiumButton } from "@/components/PremiumButton";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
-interface WalletInfo {
-  balance: number;
-  totalSpent: number;
-  totalRides: number;
-}
-
-interface TransactionInfo {
+interface Transaction {
   id: number;
-  type: string;
-  amount: number;
+  type: 'ride' | 'cashback' | 'pix';
   description: string;
+  amount: number;
   createdAt: string;
 }
 
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
-  const [wallet, setWallet] = useState<WalletInfo | null>(null);
-  const [transactions, setTransactions] = useState<TransactionInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, token } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    fetchWallet();
+    fetchData();
   }, []);
 
-  const fetchWallet = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const [walletRes, txRes] = await Promise.all([
-        fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/wallet`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/wallet/transactions`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      // Simulação de transações enquanto o endpoint real não está pronto
+      setTransactions([
+        { id: 1, type: 'ride', description: 'Corrida finalizada', amount: -15.90, createdAt: new Date().toISOString() },
+        { id: 2, type: 'cashback', description: 'Cashback recebido', amount: 0.80, createdAt: new Date().toISOString() },
+        { id: 3, type: 'pix', description: 'Recarga via PIX', amount: 50.00, createdAt: new Date(Date.now() - 86400000).toISOString() },
       ]);
-      if (walletRes.ok) setWallet(await walletRes.json());
-      if (txRes.ok) setTransactions(await txRes.json());
     } catch {
       // ignore
     } finally {
@@ -53,91 +52,77 @@ export default function WalletScreen() {
     }
   };
 
-  const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace(".", ",")}`;
-  const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  const handleAddCredits = () => {
+    Alert.alert("Adicionar Créditos", "Escolha o valor que deseja adicionar via PIX.");
+  };
+
+  const formatCurrency = (val: number) => `R$ ${Math.abs(val).toFixed(2).replace(".", ",")}`;
+  const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: '2-digit', minute: '2-digit' });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={["rgba(0,200,255,0.08)", "transparent"]} style={styles.bgGlow} pointerEvents="none" />
+
       <FlatList
         data={transactions}
         keyExtractor={(item) => String(item.id)}
-        onRefresh={fetchWallet}
-        refreshing={loading}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         ListHeaderComponent={
           <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16 }}>
-            <Text style={[styles.title, { color: colors.foreground }]}>Carteira</Text>
+            {/* Header */}
+            <View style={styles.header}>
+              <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                <Feather name="arrow-left" size={22} color={colors.foreground} />
+              </Pressable>
+              <Text style={[styles.title, { color: colors.foreground }]}>Minha Carteira</Text>
+            </View>
 
-            {/* Balance card */}
-            <LinearGradient
-              colors={["#00C8FF", "#0044BB"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.balanceCard, { borderRadius: colors.radius + 4 }]}
-            >
-              <View style={styles.balanceTop}>
-                <Text style={styles.balanceLabel}>Saldo disponível</Text>
-                <Feather name="credit-card" size={24} color="rgba(255,255,255,0.7)" />
+            {/* Balance Card */}
+            <GlowView glowColor={colors.primary} glowIntensity="medium" style={styles.balanceCard}>
+              <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>Saldo disponível</Text>
+              <Text style={[styles.balanceValue, { color: colors.foreground }]}>
+                R$ {Number(user?.walletBalance || 0).toFixed(2).replace(".", ",")}
+              </Text>
+              <View style={styles.cashbackBadge}>
+                <Feather name="gift" size={12} color={colors.success} />
+                <Text style={[styles.cashbackText, { color: colors.success }]}>5% de Cashback em todas as corridas</Text>
               </View>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.balanceAmount}>
-                  {formatCurrency(wallet?.balance ?? 0)}
-                </Text>
-              )}
-              <View style={styles.balanceStats}>
-                <View>
-                  <Text style={styles.statLabel}>Total gasto</Text>
-                  <Text style={styles.statValue}>{formatCurrency(wallet?.totalSpent ?? 0)}</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View>
-                  <Text style={styles.statLabel}>Viagens</Text>
-                  <Text style={styles.statValue}>{wallet?.totalRides ?? 0}</Text>
-                </View>
-              </View>
-            </LinearGradient>
+            </GlowView>
 
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Extrato</Text>
+            {/* Actions */}
+            <View style={styles.actionsRow}>
+              <PremiumButton
+                title="Adicionar via PIX"
+                variant="success"
+                onPress={handleAddCredits}
+                style={{ flex: 1 }}
+              />
+            </View>
 
-            {transactions.length === 0 && !loading && (
-              <View style={styles.empty}>
-                <Feather name="credit-card" size={40} color={colors.border} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  Sem transações ainda
-                </Text>
-              </View>
-            )}
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Histórico recente</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <GlowView
-            style={[styles.txCard, { marginHorizontal: 20 }]}
-            noBorder={item.type !== "credit"}
-            glowColor={item.type === "credit" ? colors.success : undefined}
-          >
-            <Feather
-              name={item.type === "credit" ? "arrow-down-circle" : "arrow-up-circle"}
-              size={22}
-              color={item.type === "credit" ? colors.success : colors.destructive}
-            />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={[styles.txDesc, { color: colors.foreground }]}>{item.description}</Text>
-              <Text style={[styles.txDate, { color: colors.mutedForeground }]}>{formatDate(item.createdAt)}</Text>
+          <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+            <View style={[styles.historyItem, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <View style={[styles.historyIcon, { backgroundColor: colors.muted }]}>
+                <Feather 
+                  name={item.type === 'ride' ? 'navigation' : item.type === 'cashback' ? 'gift' : 'plus'} 
+                  size={16} 
+                  color={item.amount > 0 ? colors.success : colors.primary} 
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.historyLabel, { color: colors.foreground }]}>{item.description}</Text>
+                <Text style={[styles.historyDate, { color: colors.mutedForeground }]}>{formatDate(item.createdAt)}</Text>
+              </View>
+              <Text style={[styles.historyValue, { color: item.amount > 0 ? colors.success : colors.foreground }]}>
+                {item.amount > 0 ? '+' : '-'} {formatCurrency(item.amount)}
+              </Text>
             </View>
-            <Text
-              style={[
-                styles.txAmount,
-                { color: item.type === "credit" ? colors.success : colors.destructive },
-              ]}
-            >
-              {item.type === "credit" ? "+" : "-"}{formatCurrency(Math.abs(item.amount))}
-            </Text>
-          </GlowView>
+          </View>
         )}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
     </View>
   );
@@ -145,20 +130,20 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  title: { fontSize: 24, fontFamily: "Inter_700Bold", marginBottom: 20 },
-  balanceCard: { padding: 24, marginBottom: 28 },
-  balanceTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  balanceLabel: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "Inter_500Medium" },
-  balanceAmount: { color: "#fff", fontSize: 36, fontFamily: "Inter_700Bold", marginBottom: 20 },
-  balanceStats: { flexDirection: "row", alignItems: "center", gap: 24 },
-  statLabel: { color: "rgba(255,255,255,0.6)", fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 2 },
-  statValue: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  statDivider: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.2)" },
-  sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 14 },
-  txCard: { flexDirection: "row", alignItems: "center", padding: 14 },
-  txDesc: { fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 2 },
-  txDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  txAmount: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  empty: { alignItems: "center", gap: 12, paddingVertical: 40 },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  bgGlow: { position: "absolute", inset: 0 },
+  header: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
+  backBtn: { padding: 4, marginRight: 12 },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  balanceCard: { padding: 24, alignItems: 'center', marginBottom: 20 },
+  balanceLabel: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 8 },
+  balanceValue: { fontSize: 36, fontFamily: "Inter_700Bold", marginBottom: 16 },
+  cashbackBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0, 255, 157, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  cashbackText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  actionsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 16 },
+  historyItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, gap: 12 },
+  historyIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  historyLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  historyDate: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  historyValue: { fontSize: 14, fontFamily: "Inter_700Bold" },
 });

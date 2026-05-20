@@ -13,7 +13,7 @@ import { useColors } from "@/hooks/useColors";
 interface Props {
   title: string;
   onPress: () => void;
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "success";
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -111,6 +111,29 @@ export function PremiumButton({
         ]}
       >
         <Text style={[styles.secondaryText, { fontSize: fontSizes[size], color: colors.destructive }]}>{title}</Text>
+      </Pressable>
+    );
+  }
+
+  if (variant === "success") {
+    return (
+      <Pressable
+        onPress={handlePress}
+        disabled={disabled || loading}
+        style={({ pressed }) => [
+          styles.base,
+          {
+            height: heights[size],
+            borderRadius: colors.radius,
+            backgroundColor: "rgba(0, 255, 157, 0.15)",
+            borderWidth: 1,
+            borderColor: "rgba(0, 255, 157, 0.3)",
+            opacity: pressed || disabled ? 0.7 : 1,
+          },
+          style,
+        ]}
+      >
+        <Text style={[styles.secondaryText, { fontSize: fontSizes[size], color: colors.success }]}>{title}</Text>
       </Pressable>
     );
   }
