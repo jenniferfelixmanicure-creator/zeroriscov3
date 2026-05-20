@@ -23,6 +23,7 @@ export const ridesTable = pgTable("rides", {
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   cancellationReason: text("cancellation_reason"),
+  verificationPin: text("verification_pin"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

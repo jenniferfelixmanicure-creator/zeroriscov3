@@ -43,6 +43,7 @@ interface RideDetail {
   driverPlate?: string | null;
   estimatedDistance: number;
   estimatedDuration: number;
+  verificationPin?: string | null;
   createdAt: string;
 }
 
@@ -162,20 +163,37 @@ export default function RideDetailScreen() {
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Detalhes da corrida</Text>
         {ride && (
-          <Pressable onPress={() => router.push(`/chat/${ride.id}`)} style={styles.chatBtn}>
-            <Feather name="message-circle" size={22} color={colors.primary} />
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <Pressable 
+              onPress={() => Alert.alert("SOS Acionado", "As autoridades e contatos de emergência foram notificados.")} 
+              style={[styles.sosBtn, { backgroundColor: colors.destructive + '22' }]}
+            >
+              <Feather name="alert-triangle" size={20} color={colors.destructive} />
+            </Pressable>
+            <Pressable onPress={() => router.push(`/chat/${ride.id}`)} style={styles.chatBtn}>
+              <Feather name="message-circle" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
         )}
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {/* Status */}
-        <GlowView glowColor={config.color} glowIntensity="medium" style={styles.statusCard}>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: config.color }]} />
-            <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
-          </View>
-        </GlowView>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <GlowView glowColor={config.color} glowIntensity="medium" style={[styles.statusCard, { flex: 1 }]}>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: config.color }]} />
+              <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
+            </View>
+          </GlowView>
+          
+          {ride?.verificationPin && !isDriver && ["accepted", "arrived"].includes(ride.status) && (
+            <GlowView glowColor={colors.primary} glowIntensity="low" style={styles.pinCard}>
+              <Text style={[styles.pinLabel, { color: colors.mutedForeground }]}>PIN</Text>
+              <Text style={[styles.pinValue, { color: colors.primary }]}>{ride.verificationPin}</Text>
+            </GlowView>
+          )}
+        </View>
 
         {/* Route */}
         {ride && (
@@ -273,11 +291,15 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4, marginRight: 12 },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold" },
   chatBtn: { padding: 4 },
+  sosBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 20, gap: 14, paddingTop: 4 },
   statusCard: { padding: 18 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusLabel: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  pinCard: { paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  pinLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  pinValue: { fontSize: 20, fontFamily: "Inter_700Bold" },
   routeCard: { padding: 16 },
   routeRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },

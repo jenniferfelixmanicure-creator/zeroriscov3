@@ -10,7 +10,8 @@ commands = [
     "ALTER TABLE users ALTER COLUMN cpf DROP NOT EXISTS;",
     "ALTER TABLE users ALTER COLUMN password_hash DROP NOT EXISTS;",
     "ALTER TABLE users ALTER COLUMN phone DROP NOT EXISTS;",
-    "ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;"
+    "ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
+    "ALTER TABLE rides ADD COLUMN IF NOT EXISTS verification_pin TEXT;"
 ]
 
 try:

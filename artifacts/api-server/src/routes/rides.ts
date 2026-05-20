@@ -144,6 +144,9 @@ router.post("/rides", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Gerar PIN de 4 dígitos para segurança extra
+  const verificationPin = Math.floor(1000 + Math.random() * 9000).toString();
+
   const [ride] = await db
     .insert(ridesTable)
     .values({
@@ -159,6 +162,7 @@ router.post("/rides", requireAuth, async (req, res): Promise<void> => {
       estimatedDistance: String(estimatedDistance),
       estimatedDuration: Number(estimatedDuration),
       estimatedFare: String(estimatedFare),
+      verificationPin,
     })
     .returning();
 
