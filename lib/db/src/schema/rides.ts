@@ -22,6 +22,7 @@ export const ridesTable = pgTable("rides", {
   finalFare: numeric("final_fare", { precision: 10, scale: 2 }),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
+  cancellationReason: text("cancellation_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

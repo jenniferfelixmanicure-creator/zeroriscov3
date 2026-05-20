@@ -5,10 +5,13 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  cpf: text("cpf").notNull().unique(),
+  cpf: text("cpf").unique(),
   email: text("email"),
-  phone: text("phone").notNull(),
-  passwordHash: text("password_hash").notNull(),
+  phone: text("phone"),
+  passwordHash: text("password_hash"),
+  googleId: text("google_id"),
+  appleId: text("apple_id"),
+  refreshToken: text("refresh_token"),
   role: text("role").notNull().default("passenger"), // passenger | driver | admin
   avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").notNull().default(true),

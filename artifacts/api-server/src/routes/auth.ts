@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import { db } from "@workspace/db";
 import { usersTable, driverProfilesTable } from "@workspace/db";
-import { signToken, requireAuth, getUser } from "../lib/jwtAuth";
+import { signToken, signRefreshToken, verifyRefreshToken, requireAuth, getUser } from "../lib/jwtAuth";
 
 const router: IRouter = Router();
 
@@ -24,17 +24,7 @@ function saveBase64File(base64: string, filename: string): string {
 
 router.post("/auth/register", async (req, res): Promise<void> => {
   const { name, cpf, phone, password, role, vehicleModel, vehiclePlate, cnhBase64, crlvBase64 } =
-    req.body as {
-      name?: string;
-      cpf?: string;
-      phone?: string;
-      password?: string;
-      role?: string;
-      vehicleModel?: string;
-      vehiclePlate?: string;
-      cnhBase64?: string;
-      crlvBase64?: string;
-    };
+    req.body as any;
 
   const rawCpf = (cpf ?? "").replace(/\D/g, "");
 
@@ -86,9 +76,13 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const token = signToken({ userId: user.id, role: user.role });
+  const refreshToken = signRefreshToken({ userId: user.id, role: user.role });
+
+  await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
 
   res.status(201).json({
     token,
+    refreshToken,
     user: {
       id: user.id,
       name: user.name,
@@ -113,7 +107,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.cpf, rawCpf));
 
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
     res.status(401).json({ error: "CPF ou senha inválidos" });
     return;
   }
@@ -133,9 +127,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   const token = signToken({ userId: user.id, role: user.role });
+  const refreshToken = signRefreshToken({ userId: user.id, role: user.role });
+
+  await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
 
   res.json({
     token,
+    refreshToken,
     user: {
       id: user.id,
       name: user.name,
@@ -147,6 +145,40 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       createdAt: user.createdAt.toISOString(),
     },
   });
+});
+
+router.post("/auth/refresh", async (req, res): Promise<void> => {
+  const { refreshToken } = req.body as { refreshToken?: string };
+
+  if (!refreshToken) {
+    res.status(400).json({ error: "Refresh token obrigatório" });
+    return;
+  }
+
+  try {
+    const payload = verifyRefreshToken(refreshToken);
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId));
+
+    if (!user || user.refreshToken !== refreshToken) {
+      res.status(401).json({ error: "Refresh token inválido" });
+      return;
+    }
+
+    const newToken = signToken({ userId: user.id, role: user.role });
+    const newRefreshToken = signRefreshToken({ userId: user.id, role: user.role });
+
+    await db.update(usersTable).set({ refreshToken: newRefreshToken }).where(eq(usersTable.id, user.id));
+
+    res.json({ token: newToken, refreshToken: newRefreshToken });
+  } catch {
+    res.status(401).json({ error: "Refresh token expirado ou inválido" });
+  }
+});
+
+router.post("/auth/logout", requireAuth, async (req, res): Promise<void> => {
+  const { userId } = getUser(req);
+  await db.update(usersTable).set({ refreshToken: null }).where(eq(usersTable.id, userId));
+  res.json({ success: true });
 });
 
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
