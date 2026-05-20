@@ -1,36 +1,808 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ZeroRisco - Urban Mobility Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: categories
+  - name: rides
+  - name: drivers
+  - name: ratings
+  - name: wallet
+  - name: messages
+  - name: notifications
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
-          description: Healthy
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+          description: Healthy
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all ride categories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryInfo"
+
+  /rides/estimate:
+    post:
+      operationId: estimateRide
+      tags: [rides]
+      summary: Estimate ride fare and duration
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RideEstimateInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RideEstimate"
+
+  /rides:
+    post:
+      operationId: createRide
+      tags: [rides]
+      summary: Create a new ride request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RideInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideInfo"
+    get:
+      operationId: listRides
+      tags: [rides]
+      summary: List user rides
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RideInfo"
+
+  /rides/{id}:
+    get:
+      operationId: getRide
+      tags: [rides]
+      summary: Get ride by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideInfo"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rides/{id}/status:
+    patch:
+      operationId: updateRideStatus
+      tags: [rides]
+      summary: Update ride status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RideStatusInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideInfo"
+
+  /drivers/status:
+    get:
+      operationId: getDriverStatus
+      tags: [drivers]
+      summary: Get driver online/offline status and profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverInfo"
+    patch:
+      operationId: updateDriverStatus
+      tags: [drivers]
+      summary: Toggle driver online/offline
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverStatusInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverInfo"
+
+  /drivers/earnings:
+    get:
+      operationId: getDriverEarnings
+      tags: [drivers]
+      summary: Get driver earnings summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverEarnings"
+
+  /ratings:
+    post:
+      operationId: createRating
+      tags: [ratings]
+      summary: Rate a completed ride
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingInfo"
+    get:
+      operationId: listRatings
+      tags: [ratings]
+      summary: List ratings for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RatingInfo"
+
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet balance and info
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletInfo"
+
+  /wallet/transactions:
+    get:
+      operationId: listTransactions
+      tags: [wallet]
+      summary: List wallet transactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TransactionInfo"
+
+  /messages/{rideId}:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List messages for a ride
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageInfo"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message in a ride
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rideId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageInfo"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationInfo"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    UserInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [passenger, driver]
+        vehicleModel:
+          type: ["string", "null"]
+        vehiclePlate:
+          type: ["string", "null"]
+      required: [name, email, phone, password, role]
+
+    LoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required: [token, user]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        totalRides:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, name, email, phone, role, totalRides, createdAt]
+
+    CategoryInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        baseFare:
+          type: number
+        pricePerKm:
+          type: number
+        pricePerMinute:
+          type: number
+        minFare:
+          type: number
+        multiplier:
+          type: number
+      required: [id, name, description, icon, baseFare, pricePerKm, pricePerMinute, minFare, multiplier]
+
+    RideEstimateInput:
+      type: object
+      properties:
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destinationLat:
+          type: number
+        destinationLng:
+          type: number
+      required: [originLat, originLng, destinationLat, destinationLng]
+
+    RideEstimate:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryIcon:
+          type: string
+        estimatedDistance:
+          type: number
+        estimatedDuration:
+          type: integer
+        estimatedFare:
+          type: number
+      required: [categoryId, categoryName, categoryIcon, estimatedDistance, estimatedDuration, estimatedFare]
+
+    RideInput:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        originAddress:
+          type: string
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destinationAddress:
+          type: string
+        destinationLat:
+          type: number
+        destinationLng:
+          type: number
+        estimatedDistance:
+          type: number
+        estimatedDuration:
+          type: integer
+        estimatedFare:
+          type: number
+      required: [categoryId, originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, estimatedDistance, estimatedDuration, estimatedFare]
+
+    RideInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        passengerId:
+          type: integer
+        driverId:
+          type: ["integer", "null"]
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryIcon:
+          type: string
+        status:
+          type: string
+        originAddress:
+          type: string
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destinationAddress:
+          type: string
+        destinationLat:
+          type: number
+        destinationLng:
+          type: number
+        estimatedDistance:
+          type: number
+        estimatedDuration:
+          type: integer
+        estimatedFare:
+          type: number
+        finalFare:
+          type: ["number", "null"]
+        driverName:
+          type: ["string", "null"]
+        driverPhone:
+          type: ["string", "null"]
+        driverRating:
+          type: ["number", "null"]
+        driverVehicle:
+          type: ["string", "null"]
+        driverPlate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+      required: [id, passengerId, categoryId, categoryName, categoryIcon, status, originAddress, originLat, originLng, destinationAddress, destinationLat, destinationLng, estimatedDistance, estimatedDuration, estimatedFare, createdAt]
+
+    RideStatusInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [accepted, arrived, in_progress, completed, cancelled]
+        driverId:
+          type: ["integer", "null"]
+      required: [status]
+
+    DriverInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        vehicleModel:
+          type: string
+        vehiclePlate:
+          type: string
+        isOnline:
+          type: boolean
+        rating:
+          type: number
+        totalRides:
+          type: integer
+        balance:
+          type: number
+      required: [id, userId, name, phone, vehicleModel, vehiclePlate, isOnline, rating, totalRides, balance]
+
+    DriverStatusInput:
+      type: object
+      properties:
+        isOnline:
+          type: boolean
+      required: [isOnline]
+
+    DriverEarnings:
+      type: object
+      properties:
+        today:
+          type: number
+        week:
+          type: number
+        month:
+          type: number
+        totalRides:
+          type: integer
+        balance:
+          type: number
+        recentTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionInfo"
+      required: [today, week, month, totalRides, balance, recentTransactions]
+
+    RatingInput:
+      type: object
+      properties:
+        rideId:
+          type: integer
+        toUserId:
+          type: integer
+        rating:
+          type: integer
+        comment:
+          type: ["string", "null"]
+      required: [rideId, toUserId, rating]
+
+    RatingInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        rideId:
+          type: integer
+        fromUserId:
+          type: integer
+        toUserId:
+          type: integer
+        rating:
+          type: integer
+        comment:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, rideId, fromUserId, toUserId, rating, createdAt]
+
+    WalletInfo:
+      type: object
+      properties:
+        balance:
+          type: number
+        totalSpent:
+          type: number
+        totalRides:
+          type: integer
+      required: [balance, totalSpent, totalRides]
+
+    TransactionInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        createdAt:
+          type: string
+      required: [id, type, amount, description, createdAt]
+
+    MessageInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        rideId:
+          type: integer
+        senderId:
+          type: integer
+        senderName:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+      required: [id, rideId, senderId, senderName, content, createdAt]
+
+    MessageInput:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    NotificationInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, title, body, type, isRead, createdAt]

@@ -1,0 +1,316 @@
+Crie um aplicativo COMPLETO de mobilidade urbana chamado ZeroRisco.
+
+O aplicativo deve ser inspirado em:
+
+- Uber
+- 99
+- InDrive
+
+Porém com identidade própria premium, moderna, futurista e tecnológica.
+
+IMPORTANTE:
+Quero um aplicativo PROFISSIONAL, escalável e pronto para produção.
+
+TECNOLOGIAS:
+
+- React Native
+- Expo
+- TypeScript
+- PostgreSQL
+- Backend Node.js
+- Socket.IO para tempo real
+- Render para hospedagem
+- JWT Authentication
+
+OBJETIVO:
+Criar uma plataforma completa de mobilidade urbana com:
+
+- Aplicativo Passageiro
+- Aplicativo Motorista
+- Painel Administrativo
+- Sistema de corridas em tempo real
+- Sistema financeiro
+- Sistema de categorias
+- Sistema de avaliações
+- Sistema de notificações
+- Chat interno
+- Controle completo da plataforma
+
+VISUAL:
+Tema premium futurista:
+
+- Dark mode
+- Azul neon
+- Glow effects
+- Glassmorphism
+- Interface clean
+- Visual tecnológico
+- UX premium
+- Animações suaves
+- Estilo Tesla + Uber Black + Cyberpunk clean
+
+CORES:
+
+- Fundo escuro profundo
+- Azul neon vibrante
+- Transparências elegantes
+- Sombras suaves
+- Glow azul
+
+O aplicativo deve parecer:
+
+- Moderno
+- Luxuoso
+- Tecnológico
+- Profissional
+- Superior visualmente aos concorrentes
+
+APLICATIVO PASSAGEIRO:
+
+TELAS:
+
+- SplashScreen
+- Login
+- Cadastro
+- Recuperar senha
+- Home
+- Solicitar corrida
+- Escolha de categoria
+- Histórico
+- Carteira
+- Perfil
+- Configurações
+- Chat
+- Notificações
+- Pagamentos
+- Avaliações
+- Suporte
+
+FUNCIONALIDADES:
+
+- Cadastro/login
+- Solicitar corrida
+- Escolher categoria
+- Ver estimativa de valor
+- Histórico de viagens
+- Avaliar motorista
+- Chat com motorista
+- Carteira
+- Cupons
+- Notificações
+- Favoritos
+- Compartilhar corrida
+- Segurança
+
+APLICATIVO MOTORISTA:
+
+TELAS:
+
+- SplashScreen
+- Login
+- Cadastro motorista
+- Upload de documentos
+- Home motorista
+- Receber corridas
+- Navegação
+- Ganhos
+- Histórico
+- Carteira
+- Perfil
+- Configurações
+- Avaliações
+- Saque
+- Status online/offline
+
+FUNCIONALIDADES:
+
+- Receber corridas em tempo real
+- Aceitar/rejeitar corridas
+- Ver ganhos
+- Histórico financeiro
+- Status online
+- Navegação externa
+- Sistema de avaliações
+- Controle de corridas
+
+CATEGORIAS:
+Criar sistema de categorias:
+
+- ZeroRisco Fast
+- ZeroRisco Urban
+- ZeroRisco Prime
+- ZeroRisco Black
+
+REGRAS:
+Fast:
+
+- Moto
+
+Urban:
+
+- Básico
+
+Prime:
+
+- Intermediário
+
+Black:
+
+- VIP
+
+Cada categoria deve possuir:
+
+- Valor mínimo
+- Valor por KM
+- Valor por minuto
+- Multiplicador próprio
+
+MAPA:
+NÃO usar Google Maps API paga.
+
+Utilizar:
+
+- OpenStreetMap
+- Nominatim
+- Photon
+- APIs gratuitas
+
+LÓGICA DE ENDEREÇO:
+
+- Usuário digita endereço
+- Mostrar sugestões automáticas
+- Autocomplete inteligente
+- Seleção de origem e destino
+
+NAVEGAÇÃO:
+NÃO criar navegação interna pesada.
+
+Utilizar:
+
+- Deep linking para Waze
+- Deep linking para Google Maps
+
+Fluxo:
+
+1. Motorista aceita corrida
+2. Botão “Navegar até passageiro”
+3. Abrir Waze/Google Maps
+4. Chegou ao passageiro
+5. Iniciar corrida
+6. Abrir Waze/Google Maps até destino
+
+CÁLCULO DE CORRIDA:
+Criar lógica semelhante Uber:
+
+Fórmula:
+Valor Final =
+Tarifa Base +
+(KM × ValorPorKM) +
+(Tempo × ValorPorMinuto)
+
+Considerar:
+
+- Distância
+- Tempo
+- Categoria
+- Tarifa mínima
+- Taxa da plataforma
+
+Possibilidade futura:
+
+- Dinâmica
+- Horário de pico
+- Clima
+- Eventos
+
+TEMPO REAL:
+Utilizar Socket.IO:
+
+- Corridas em tempo real
+- Atualização de status
+- Motorista online
+- Notificações instantâneas
+- Chat em tempo real
+
+PAINEL ADMINISTRATIVO:
+Criar painel web completo:
+
+FUNCIONALIDADES:
+
+- Dashboard
+- Controle de usuários
+- Controle de motoristas
+- Controle financeiro
+- Corridas
+- Categorias
+- Configurações
+- Relatórios
+- Banimentos
+- Aprovação de documentos
+- Promoções
+- Cupons
+- Notificações push
+
+VISUAL:
+Mesmo padrão premium do app.
+
+DESIGN SYSTEM:
+Criar sistema global:
+
+- theme.ts
+- colors.ts
+- typography.ts
+- spacing.ts
+- shadows.ts
+- animations.ts
+
+COMPONENTES:
+
+- PremiumButton
+- PremiumCard
+- PremiumInput
+- PremiumModal
+- PremiumToast
+- PremiumLoader
+- PremiumBottomSheet
+
+ANIMAÇÕES:
+
+- Fade
+- Scale
+- Glow
+- Microinterações
+- Transições suaves
+
+ANDROID:
+Compatibilidade total:
+
+- Android 10+
+- Expo
+- React Native latest
+
+PERFORMANCE:
+
+- Aplicativo leve
+- Fluido
+- Responsivo
+- Otimizado
+- Estrutura escalável
+
+ARQUITETURA:
+Organizar:
+
+- components/
+- screens/
+- services/
+- hooks/
+- navigation/
+- theme/
+- providers/
+- context/
+- utils/
+
+IMPORTANTE:
+Criar código limpo, profissional e escalável.
+
+O aplicativo precisa parecer um produto milionário pronto para competir com Uber e 99.
