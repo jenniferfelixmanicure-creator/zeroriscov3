@@ -3,7 +3,10 @@ import { logger } from "./logger";
 
 // O Manus tem a biblioteca OpenAI pré-configurada para usar gpt-4.1-mini/nano
 // Mas a estrutura é compatível com Grok (xAI) bastando trocar o base_url e a chave se necessário.
-const client = new OpenAI();
+const client = new OpenAI({
+  apiKey: process.env.GROK_API_KEY,
+  baseURL: "https://api.x.ai/v1",
+});
 
 const ZERO_RISCO_SYSTEM_PROMPT = `
 Você é a Inteligência Artificial oficial da plataforma ZeroRisco, um aplicativo de mobilidade urbana de elite.
@@ -26,7 +29,7 @@ DIRETRIZES TÉCNICAS (PRECIFICAÇÃO):
 export async function askZeroRisco(prompt: string, context: string = "") {
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini", // Pode ser substituído por 'grok-beta' se o usuário fornecer a chave xAI
+      model: "grok-beta",
       messages: [
         { role: "system", content: ZERO_RISCO_SYSTEM_PROMPT },
         { role: "user", content: `Contexto Atual: ${context}\n\nPergunta/Comando: ${prompt}` }
@@ -66,12 +69,13 @@ export async function calculateSmartPrice(data: {
     `;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "grok-beta",
       messages: [
         { role: "system", content: "Você é o motor de precificação dinâmica da ZeroRisco. Retorne apenas JSON puro." },
         { role: "user", content: prompt }
       ],
-      response_format: { type: "json_object" },
+      // Nota: Se o grok-beta não suportar json_object nativo, o prompt já solicita JSON puro.
+      // response_format: { type: "json_object" }, 
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");

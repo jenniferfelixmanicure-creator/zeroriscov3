@@ -8,6 +8,7 @@ Como você já criou o serviço de backend no Render, certifique-se de configura
 | `JWT_SECRET` | Chave secreta para gerar os tokens de acesso | `uma_chave_muito_segura_e_longa` |
 | `REFRESH_SECRET` | Chave secreta para os tokens de atualização | `outra_chave_segura_para_refresh` |
 | `ADMIN_PASSWORD` | Senha para acessar o Painel Administrativo | `sua_senha_admin_aqui` |
+| `GROK_API_KEY` | Chave de API da xAI (Grok) | `xai-LzRed...` |
 | `PORT` | Porta onde o servidor vai rodar | `5000` (O Render geralmente define isso automaticamente) |
 
 ## Passos Adicionais:
