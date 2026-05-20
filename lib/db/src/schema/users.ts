@@ -5,10 +5,11 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull().unique(),
+  cpf: text("cpf").notNull().unique(),
+  email: text("email"),
   phone: text("phone").notNull(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role").notNull().default("passenger"), // passenger | driver
+  role: text("role").notNull().default("passenger"), // passenger | driver | admin
   avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -23,6 +24,10 @@ export const driverProfilesTable = pgTable("driver_profiles", {
   rating: numeric("rating", { precision: 3, scale: 2 }).notNull().default("5.00"),
   totalRides: integer("total_rides").notNull().default(0),
   balance: numeric("balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending | approved | rejected
+  cnhUrl: text("cnh_url"),
+  crlvUrl: text("crlv_url"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

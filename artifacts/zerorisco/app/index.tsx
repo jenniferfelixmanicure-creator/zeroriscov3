@@ -20,8 +20,11 @@ export default function Root() {
   }
 
   if (user.role === "driver") {
-    return <Redirect href="/(driver)/" />;
+    if (user.approvalStatus && user.approvalStatus !== "approved") {
+      return <Redirect href="/(driver)/pending" />;
+    }
+    return <Redirect href="/(driver)" />;
   }
 
-  return <Redirect href="/(passenger)/" />;
+  return <Redirect href="/(passenger)" />;
 }

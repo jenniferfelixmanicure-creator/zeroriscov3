@@ -112,7 +112,7 @@ export default function RideDetailScreen() {
             body: JSON.stringify({ status: "cancelled" }),
           });
           clearRide();
-          router.replace("/(passenger)/");
+          router.replace("/(passenger)");
         },
       },
     ]);
@@ -272,7 +272,7 @@ export default function RideDetailScreen() {
           <PremiumButton
             title="Voltar ao início"
             variant="ghost"
-            onPress={() => router.replace("/(passenger)/")}
+            onPress={() => router.replace("/(passenger)")}
           />
         )}
       </ScrollView>

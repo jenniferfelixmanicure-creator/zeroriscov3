@@ -5,17 +5,17 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 setBaseUrl(API_BASE);
 
-export type UserRole = "passenger" | "driver";
+export type UserRole = "passenger" | "driver" | "admin";
+export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export interface AuthUser {
   id: number;
   name: string;
-  email: string;
+  cpf: string;
   phone: string;
   role: UserRole;
   avatarUrl?: string | null;
-  rating?: number | null;
-  totalRides: number;
+  approvalStatus?: ApprovalStatus;
 }
 
 interface AuthContextValue {

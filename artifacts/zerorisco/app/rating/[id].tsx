@@ -51,7 +51,7 @@ export default function RatingScreen() {
       });
       if (res.ok) {
         Alert.alert("Obrigado!", "Sua avaliação foi enviada.", [
-          { text: "OK", onPress: () => router.replace("/(passenger)/") },
+          { text: "OK", onPress: () => router.replace("/(passenger)") },
         ]);
       }
     } catch {
@@ -117,7 +117,7 @@ export default function RatingScreen() {
           style={{ width: "100%" }}
         />
 
-        <Pressable onPress={() => router.replace("/(passenger)/")} style={{ marginTop: 8 }}>
+        <Pressable onPress={() => router.replace("/(passenger)")} style={{ marginTop: 8 }}>
           <Text style={[styles.skip, { color: colors.mutedForeground }]}>Pular avaliação</Text>
         </Pressable>
       </View>

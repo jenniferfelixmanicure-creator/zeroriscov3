@@ -18,18 +18,29 @@ import { PremiumInput } from "@/components/PremiumInput";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
+function formatCpf(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+}
+
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleCpfChange = (text: string) => setCpf(formatCpf(text));
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Atenção", "Preencha todos os campos.");
+    const rawCpf = cpf.replace(/\D/g, "");
+    if (rawCpf.length !== 11 || !password) {
+      Alert.alert("Atenção", "Preencha o CPF e a senha.");
       return;
     }
     setLoading(true);
@@ -37,7 +48,7 @@ export default function LoginScreen() {
       const res = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ cpf: rawCpf, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -46,9 +57,13 @@ export default function LoginScreen() {
       }
       await login(data.token, data.user);
       if (data.user.role === "driver") {
-        router.replace("/(driver)/");
+        if (data.user.approvalStatus === "approved") {
+          router.replace("/(driver)");
+        } else {
+          router.replace("/(driver)/pending");
+        }
       } else {
-        router.replace("/(passenger)/");
+        router.replace("/(passenger)");
       }
     } catch {
       Alert.alert("Erro", "Falha na conexão. Tente novamente.");
@@ -89,20 +104,19 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
-            <Text style={[styles.title, { color: colors.foreground }]}>Bem-vindo de volta</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>Bem Vindo</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Entre na sua conta
+              Entre com seu CPF e senha
             </Text>
 
             <View style={styles.fields}>
               <PremiumInput
-                label="E-mail"
-                placeholder="seu@email.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon="mail"
+                label="CPF"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChangeText={handleCpfChange}
+                keyboardType="numeric"
+                leftIcon="user"
               />
               <PremiumInput
                 label="Senha"

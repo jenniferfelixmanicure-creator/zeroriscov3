@@ -1,10 +1,10 @@
 import React from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View, ViewStyle, StyleProp } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 interface Props {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   glowColor?: string;
   glowIntensity?: "low" | "medium" | "high";
   noBorder?: boolean;

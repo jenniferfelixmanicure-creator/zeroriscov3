@@ -65,18 +65,17 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </LinearGradient>
           <Text style={[styles.name, { color: colors.foreground }]}>{user?.name}</Text>
-          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user?.email}</Text>
+          <Text style={[styles.email, { color: colors.mutedForeground }]}>
+            {user?.phone ?? ""}
+          </Text>
 
-          <View style={styles.statsRow}>
-            {[
-              { label: "Viagens", value: String(user?.totalRides ?? 0) },
-              { label: "Avaliação", value: user?.rating ? user.rating.toFixed(1) : "5.0" },
-            ].map((stat) => (
-              <View key={stat.label} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-                <Text style={[styles.statValue, { color: colors.primary }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-              </View>
-            ))}
+          <View style={[styles.cpfCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.cpfLabel, { color: colors.mutedForeground }]}>CPF</Text>
+            <Text style={[styles.cpfValue, { color: colors.foreground }]}>
+              {user?.cpf
+                ? user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                : "—"}
+            </Text>
           </View>
         </View>
       </LinearGradient>
@@ -121,10 +120,9 @@ const styles = StyleSheet.create({
   avatarText: { color: "#fff", fontSize: 28, fontFamily: "Inter_700Bold" },
   name: { fontSize: 22, fontFamily: "Inter_700Bold", marginBottom: 4 },
   email: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 20 },
-  statsRow: { flexDirection: "row", gap: 12, width: "100%" },
-  statCard: { flex: 1, alignItems: "center", paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
-  statValue: { fontSize: 20, fontFamily: "Inter_700Bold", marginBottom: 2 },
-  statLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  cpfCard: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 20, paddingVertical: 10, alignItems: "center", marginTop: 4 },
+  cpfLabel: { fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 2 },
+  cpfValue: { fontSize: 15, fontFamily: "Inter_600SemiBold", letterSpacing: 1 },
   menu: { paddingHorizontal: 20, marginTop: 8 },
   menuItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16, paddingHorizontal: 16 },
   menuLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
