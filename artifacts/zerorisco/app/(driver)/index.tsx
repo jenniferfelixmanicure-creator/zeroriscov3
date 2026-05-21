@@ -40,16 +40,16 @@ export default function DriverHome() {
   useEffect(() => {
     if (user?.id) {
       socket.connect();
-      socket.emit("join", `driver:${user.id}`);
-      
-      socket.on("new_ride", (ride: RideRequest) => {
+      socket.emit("join_user", String(user.id));
+
+      socket.on("new_ride_available", (ride: RideRequest) => {
         if (isOnline) {
           setPendingRides(prev => [ride, ...prev]);
         }
       });
 
       return () => {
-        socket.off("new_ride");
+        socket.off("new_ride_available");
         socket.disconnect();
       };
     }
@@ -97,7 +97,7 @@ export default function DriverHome() {
         if (val) {
           socket.emit("driver_online", { driverId: user?.id });
         } else {
-          socket.emit("driver_offline", { driverId: user?.id });
+          socket.emit("driver_offline", user?.id);
         }
       }
     } catch {
