@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +55,9 @@ export default function LoginScreen() {
         return;
       }
       await login(data.token, data.refreshToken, data.user);
-      if (data.user.role === "driver") {
+      if (data.user.role === "admin") {
+        router.replace("/(tabs)");
+      } else if (data.user.role === "driver") {
         if (data.user.approvalStatus === "approved") {
           router.replace("/(driver)");
         } else {
@@ -128,15 +129,6 @@ export default function LoginScreen() {
               />
             </View>
 
-            <TouchableOpacity
-              onPress={() => router.push("/(auth)/forgot-password")}
-              style={styles.forgotBtn}
-            >
-              <Text style={[styles.forgotText, { color: colors.primary }]}>
-                Esqueceu a senha?
-              </Text>
-            </TouchableOpacity>
-
             <PremiumButton
               title="Entrar"
               onPress={handleLogin}
@@ -144,28 +136,11 @@ export default function LoginScreen() {
               style={styles.loginBtn}
             />
 
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>ou</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
-
-            <View style={styles.socialRow}>
-              <TouchableOpacity style={[styles.socialBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-                <Feather name="chrome" size={20} color={colors.foreground} />
-                <Text style={[styles.socialBtnText, { color: colors.foreground }]}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.socialBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-                <Feather name="apple" size={20} color={colors.foreground} />
-                <Text style={[styles.socialBtnText, { color: colors.foreground }]}>Apple</Text>
-              </TouchableOpacity>
-            </View>
-
             <PremiumButton
               title="Criar conta"
               onPress={() => router.push("/(auth)/register")}
               variant="secondary"
-              style={{ marginTop: 20 }}
+              style={{ marginTop: 12 }}
             />
           </View>
         </ScrollView>
@@ -192,24 +167,6 @@ const styles = StyleSheet.create({
   form: { gap: 0 },
   title: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 6 },
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 28 },
-  fields: { gap: 16, marginBottom: 12 },
-  forgotBtn: { alignSelf: "flex-end", marginBottom: 24 },
-  forgotText: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  loginBtn: { marginBottom: 20 },
-  divider: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  socialRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  socialBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  socialBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  fields: { gap: 16, marginBottom: 24 },
+  loginBtn: { marginBottom: 0 },
 });
-
