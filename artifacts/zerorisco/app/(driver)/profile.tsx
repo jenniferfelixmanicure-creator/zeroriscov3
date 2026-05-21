@@ -29,11 +29,13 @@ export default function DriverProfile() {
 
   const initials = user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "ZR";
 
+  const soon = () => Alert.alert("Em breve", "Esta funcionalidade está sendo desenvolvida.");
+
   const menuItems = [
-    { icon: "user" as const, label: "Editar perfil", onPress: () => {} },
-    { icon: "truck" as const, label: "Dados do veículo", onPress: () => {} },
-    { icon: "file-text" as const, label: "Documentos", onPress: () => {} },
-    { icon: "help-circle" as const, label: "Suporte", onPress: () => {} },
+    { icon: "user" as const, label: "Editar perfil", onPress: soon },
+    { icon: "truck" as const, label: "Dados do veículo", onPress: soon },
+    { icon: "file-text" as const, label: "Documentos", onPress: soon },
+    { icon: "help-circle" as const, label: "Suporte", onPress: () => Alert.alert("Suporte", "Entre em contato: suporte@zerorisco.app") },
     { icon: "log-out" as const, label: "Sair", onPress: handleLogout, danger: true },
   ];
 
