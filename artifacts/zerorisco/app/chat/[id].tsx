@@ -2,8 +2,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
@@ -75,7 +74,7 @@ export default function ChatScreen() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.reverse());
+        setMessages([...data].reverse());
       }
     } catch {
       // ignore
@@ -119,57 +118,53 @@ export default function ChatScreen() {
         <Feather name="shield" size={20} color={colors.primary} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
-      >
-        <FlatList
-          ref={flatRef}
-          data={messages}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          inverted
-          contentContainerStyle={styles.messageList}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyChat}>
-              <Feather name="message-circle" size={40} color={colors.border} />
-              <Text style={[styles.emptyChatText, { color: colors.mutedForeground }]}>
-                Sem mensagens ainda
-              </Text>
-            </View>
-          }
-          renderItem={({ item }) => {
-            const mine = isMine(item);
-            return (
-              <View style={[styles.msgWrapper, mine ? styles.msgRight : styles.msgLeft]}>
-                <View
-                  style={[
-                    styles.bubble,
-                    {
-                      backgroundColor: mine
-                        ? colors.primary
-                        : item.senderId === 0 ? colors.primary + '11' : colors.card,
-                      borderWidth: 1,
-                      borderColor: mine ? "transparent" : item.senderId === 0 ? colors.primary + '33' : colors.cardBorder,
-                    },
-                  ]}
-                >
-                  {!mine && (
-                    <Text style={[styles.senderName, { color: colors.primary }]}>{item.senderName}</Text>
-                  )}
-                  <Text style={[styles.msgText, { color: mine ? colors.primaryForeground : colors.foreground }]}>
-                    {item.content}
-                  </Text>
-                  <Text style={[styles.msgTime, { color: mine ? "rgba(6,13,26,0.6)" : colors.mutedForeground }]}>
-                    {formatTime(item.createdAt)}
-                  </Text>
-                </View>
+      <FlatList
+        ref={flatRef}
+        data={messages}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        inverted
+        contentContainerStyle={styles.messageList}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Feather name="message-circle" size={40} color={colors.border} />
+            <Text style={[styles.emptyChatText, { color: colors.mutedForeground }]}>
+              Sem mensagens ainda
+            </Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const mine = isMine(item);
+          return (
+            <View style={[styles.msgWrapper, mine ? styles.msgRight : styles.msgLeft]}>
+              <View
+                style={[
+                  styles.bubble,
+                  {
+                    backgroundColor: mine
+                      ? colors.primary
+                      : item.senderId === 0 ? colors.primary + '11' : colors.card,
+                    borderWidth: 1,
+                    borderColor: mine ? "transparent" : item.senderId === 0 ? colors.primary + '33' : colors.cardBorder,
+                  },
+                ]}
+              >
+                {!mine && (
+                  <Text style={[styles.senderName, { color: colors.primary }]}>{item.senderName}</Text>
+                )}
+                <Text style={[styles.msgText, { color: mine ? colors.primaryForeground : colors.foreground }]}>
+                  {item.content}
+                </Text>
+                <Text style={[styles.msgTime, { color: mine ? "rgba(6,13,26,0.6)" : colors.mutedForeground }]}>
+                  {formatTime(item.createdAt)}
+                </Text>
               </View>
-            );
-          }}
-        />
+            </View>
+          );
+        }}
+      />
 
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
         <View
           style={[
             styles.inputBar,
@@ -204,7 +199,7 @@ export default function ChatScreen() {
             <Feather name="send" size={18} color={text.trim() ? colors.primaryForeground : colors.mutedForeground} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
     </View>
   );
 }
