@@ -14,10 +14,17 @@
       "backgroundColor": "#060D1A"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.zerorisco.app"
     },
     "android": {
-      "backgroundColor": "#060D1A"
+      "backgroundColor": "#060D1A",
+      "package": "com.zerorisco.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -26,15 +33,27 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://zeroriscov3.onrender.com"
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo.",
+          "locationWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "302612dd-5e46-4a2d-b8f1-89211f161b22"
+      }
     }
   }
 }
