@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
-
-const driverIcon = require('../assets/images/icon.png');
+import { StyleSheet, View, Platform } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 interface Coordinate {
   latitude: number;
@@ -22,76 +20,136 @@ const ProfessionalMap: React.FC<ProfessionalMapProps> = ({
   origin,
   destination,
   driverLocation,
+  userLocation,
   routeCoordinates,
-  onRegionChange,
 }) => {
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
+
+  const mapHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+      <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+      <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+      <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; background: #060D1A; }
+        .marker-origin { width: 20px; height: 20px; background: #00C8FF; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 10px #00C8FF; }
+        .marker-dest { width: 20px; height: 20px; background: #FF3A6E; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 10px #FF3A6E; }
+        .marker-driver { font-size: 30px; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        const map = new maplibregl.Map({
+          container: 'map',
+          style: {
+            version: 8,
+            sources: {
+              'osm': {
+                type: 'raster',
+                tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '&copy; OpenStreetMap contributors'
+              }
+            },
+            layers: [{
+              id: 'osm',
+              type: 'raster',
+              source: 'osm',
+              minzoom: 0,
+              maxzoom: 19
+            }]
+          },
+          center: [${origin?.longitude || -46.6333}, ${origin?.latitude || -23.5505}],
+          zoom: 13
+        });
+
+        let originMarker, destMarker, driverMarker;
+
+        window.updateMarkers = (data) => {
+          const { origin, destination, driverLocation, route } = data;
+          
+          if (origin) {
+            if (!originMarker) {
+              const el = document.createElement('div'); el.className = 'marker-origin';
+              originMarker = new maplibregl.Marker(el).setLngLat([origin.longitude, origin.latitude]).addTo(map);
+            } else {
+              originMarker.setLngLat([origin.longitude, origin.latitude]);
+            }
+          }
+
+          if (destination) {
+            if (!destMarker) {
+              const el = document.createElement('div'); el.className = 'marker-dest';
+              destMarker = new maplibregl.Marker(el).setLngLat([destination.longitude, destination.latitude]).addTo(map);
+            } else {
+              destMarker.setLngLat([destination.longitude, destination.latitude]);
+            }
+          }
+
+          if (driverLocation) {
+            if (!driverMarker) {
+              const el = document.createElement('div'); el.className = 'marker-driver'; el.innerHTML = '🚗';
+              driverMarker = new maplibregl.Marker(el).setLngLat([driverLocation.longitude, driverLocation.latitude]).addTo(map);
+            } else {
+              driverMarker.setLngLat([driverLocation.longitude, driverLocation.latitude]);
+            }
+          }
+
+          if (route && route.length > 1) {
+            const geojson = {
+              type: 'Feature',
+              geometry: {
+                type: 'LineString',
+                coordinates: route.map(c => [c.longitude, c.latitude])
+              }
+            };
+            if (map.getSource('route')) {
+              map.getSource('route').setData(geojson);
+            } else {
+              map.addSource('route', { type: 'geojson', data: geojson });
+              map.addLayer({
+                id: 'route',
+                type: 'line',
+                source: 'route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: { 'line-color': '#00C8FF', 'line-width': 5 }
+              });
+            }
+          }
+
+          // Fit bounds
+          const points = [origin, destination, driverLocation].filter(Boolean);
+          if (points.length > 1) {
+            const bounds = new maplibregl.LngLatBounds();
+            points.forEach(p => bounds.extend([p.longitude, p.latitude]));
+            map.fitBounds(bounds, { padding: 50 });
+          }
+        };
+      </script>
+    </body>
+    </html>
+  `;
 
   useEffect(() => {
-    if (mapRef.current && (origin || destination || driverLocation)) {
-      const coords = [origin, destination, driverLocation].filter(Boolean) as Coordinate[];
-      if (coords.length > 0) {
-        mapRef.current.fitToCoordinates(coords, {
-          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-          animated: true,
-        });
-      }
+    if (webViewRef.current) {
+      const data = JSON.stringify({ origin, destination, driverLocation, route: routeCoordinates });
+      webViewRef.current.injectJavaScript(`window.updateMarkers(${data}); true;`);
     }
-  }, [origin, destination, driverLocation]);
+  }, [origin, destination, driverLocation, routeCoordinates]);
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
+      <WebView
+        ref={webViewRef}
+        originWhitelist={['*']}
+        source={{ html: mapHtml }}
         style={styles.map}
-        initialRegion={{
-          latitude: origin?.latitude || -23.5505,
-          longitude: origin?.longitude || -46.6333,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        onRegionChangeComplete={onRegionChange}
-        showsUserLocation
-        showsMyLocationButton={false}
-      >
-        <UrlTile
-          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          flipY={false}
-        />
-
-        {origin && (
-          <Marker
-            coordinate={origin}
-            title="Origem"
-            pinColor="#00C8FF"
-          />
-        )}
-
-        {destination && (
-          <Marker
-            coordinate={destination}
-            title="Destino"
-            pinColor="#FF3A6E"
-          />
-        )}
-
-        {driverLocation && (
-          <Marker
-            coordinate={driverLocation}
-            title="Motorista"
-            image={driverIcon}
-          />
-        )}
-
-        {routeCoordinates && routeCoordinates.length > 0 && (
-          <Polyline
-            coordinates={routeCoordinates}
-            strokeColor="#00C8FF"
-            strokeWidth={4}
-          />
-        )}
-      </MapView>
+        backgroundColor="#060D1A"
+      />
     </View>
   );
 };
@@ -99,8 +157,6 @@ const ProfessionalMap: React.FC<ProfessionalMapProps> = ({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
   },
   map: {
     ...StyleSheet.absoluteFillObject,

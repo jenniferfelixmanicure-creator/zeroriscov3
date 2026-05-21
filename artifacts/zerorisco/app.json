@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "zerorisco",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
@@ -45,12 +45,6 @@
         {
           "locationAlwaysAndWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo.",
           "locationWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo."
-        }
-      ],
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": ""
         }
       ]
     ],
