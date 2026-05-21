@@ -68,10 +68,10 @@ export default function RideDetailScreen() {
 
   useEffect(() => {
     fetchRide();
-    
+
     socket.connect();
-    socket.emit("join", `ride:${id}`);
-    
+    socket.emit("join_ride", id);
+
     socket.on("ride_updated", (updatedRide: RideDetail) => {
       setRide(updatedRide);
       if (updatedRide.status === "completed" || updatedRide.status === "cancelled") {
@@ -139,7 +139,7 @@ export default function RideDetailScreen() {
     if (!ride) return;
     const lat = ride.status === "accepted" ? ride.originLat : ride.destinationLat;
     const lng = ride.status === "accepted" ? ride.originLng : ride.destinationLng;
-    
+
     const url =
       type === "waze"
         ? `waze://?ll=${lat},${lng}&navigate=yes`
@@ -156,7 +156,6 @@ export default function RideDetailScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={["rgba(0,200,255,0.08)", "transparent"]} style={styles.bgGlow} pointerEvents="none" />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
@@ -164,8 +163,8 @@ export default function RideDetailScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>Detalhes da corrida</Text>
         {ride && (
           <View style={{ flexDirection: 'row', gap: 16 }}>
-            <Pressable 
-              onPress={() => Alert.alert("SOS Acionado", "As autoridades e contatos de emergência foram notificados.")} 
+            <Pressable
+              onPress={() => Alert.alert("SOS Acionado", "As autoridades e contatos de emergência foram notificados.")}
               style={[styles.sosBtn, { backgroundColor: colors.destructive + '22' }]}
             >
               <Feather name="alert-triangle" size={20} color={colors.destructive} />
@@ -178,7 +177,6 @@ export default function RideDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
-        {/* Status */}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <GlowView glowColor={config.color} glowIntensity="medium" style={[styles.statusCard, { flex: 1 }]}>
             <View style={styles.statusRow}>
@@ -186,7 +184,7 @@ export default function RideDetailScreen() {
               <Text style={[styles.statusLabel, { color: config.color }]}>{config.label}</Text>
             </View>
           </GlowView>
-          
+
           {ride?.verificationPin && !isDriver && ["accepted", "arrived"].includes(ride.status) && (
             <GlowView glowColor={colors.primary} glowIntensity="low" style={styles.pinCard}>
               <Text style={[styles.pinLabel, { color: colors.mutedForeground }]}>PIN</Text>
@@ -195,7 +193,6 @@ export default function RideDetailScreen() {
           )}
         </View>
 
-        {/* Route */}
         {ride && (
           <GlowView style={styles.routeCard} glowIntensity="low">
             <View style={styles.routeRow}>
@@ -224,7 +221,6 @@ export default function RideDetailScreen() {
           </GlowView>
         )}
 
-        {/* Driver/Passenger info */}
         {ride && (
           <GlowView style={styles.driverCard} glowIntensity="low">
             <View style={styles.driverRow}>
@@ -245,7 +241,6 @@ export default function RideDetailScreen() {
           </GlowView>
         )}
 
-        {/* Driver Actions */}
         {isDriver && ride && (
           <View style={{ gap: 10, marginTop: 10 }}>
             {ride.status === "accepted" && (
@@ -257,7 +252,7 @@ export default function RideDetailScreen() {
             {ride.status === "in_progress" && (
               <PremiumButton title="Finalizar corrida" loading={actionLoading} onPress={() => updateStatus("completed")} />
             )}
-            
+
             {["accepted", "arrived", "in_progress"].includes(ride.status) && (
               <View style={styles.navButtons}>
                 <PremiumButton title="Waze" variant="secondary" onPress={() => openNavigation("waze")} style={{ flex: 1 }} />
@@ -267,7 +262,6 @@ export default function RideDetailScreen() {
           </View>
         )}
 
-        {/* Passenger Actions */}
         {!isDriver && ride?.status === "searching" && (
           <PremiumButton title="Cancelar corrida" variant="danger" onPress={handleCancel} />
         )}
