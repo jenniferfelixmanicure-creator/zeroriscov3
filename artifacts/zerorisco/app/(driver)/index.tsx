@@ -37,16 +37,22 @@ export default function DriverHome() {
   const [isOnline, setIsOnline] = useState(false);
   const [pendingRides, setPendingRides] = useState<RideRequest[]>([]);
   const [accepting, setAccepting] = useState<number | null>(null);
+  const [driverRating, setDriverRating] = useState<number | null>(null);
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const isOnlineRef = useRef(false);
 
-  // Socket: join user room for ride notifications
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
+
+  // Socket: join user room for ride notifications — only reconnects when user changes
   useEffect(() => {
     if (user?.id) {
       socket.connect();
       socket.emit("join_user", String(user.id));
 
       socket.on("new_ride_available", (ride: RideRequest) => {
-        if (isOnline) {
+        if (isOnlineRef.current) {
           setPendingRides(prev => [ride, ...prev]);
         }
       });
@@ -56,7 +62,19 @@ export default function DriverHome() {
         socket.disconnect();
       };
     }
-  }, [user?.id, isOnline]);
+  }, [user?.id]);
+
+  // Fetch driver rating
+  useEffect(() => {
+    if (token) {
+      fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/drivers/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (data?.rating != null) setDriverRating(Number(data.rating)); })
+        .catch(() => {});
+    }
+  }, [token]);
 
   // GPS broadcasting when online
   useEffect(() => {
@@ -214,7 +232,9 @@ export default function DriverHome() {
               </GlowView>
               <GlowView style={styles.statCard} glowIntensity="low">
                 <Feather name="star" size={16} color="#FFB800" />
-                <Text style={[styles.statValue, { color: colors.foreground }]}>5.0</Text>
+                <Text style={[styles.statValue, { color: colors.foreground }]}>
+                  {driverRating !== null ? driverRating.toFixed(1) : "—"}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Avaliação</Text>
               </GlowView>
             </View>
