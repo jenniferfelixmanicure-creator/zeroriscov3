@@ -93,6 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
         setToken(data.token);
         setRefreshToken(data.refreshToken);
+        try {
+          const meRes = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${data.token}` },
+          });
+          if (meRes.ok) {
+            const userData = await meRes.json();
+            setUser(userData);
+            await AsyncStorage.setItem("@zerorisco_user", JSON.stringify(userData));
+          }
+        } catch {
+          // keep existing user in state
+        }
         return true;
       } else {
         await logout();
@@ -145,7 +157,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   ]);
                   setToken(data.token);
                   setRefreshToken(data.refreshToken);
-                  setUser(JSON.parse(storedUser));
+                  try {
+                    const meRes = await fetch(`${API_BASE}/api/auth/me`, {
+                      headers: { Authorization: `Bearer ${data.token}` },
+                    });
+                    if (meRes.ok) {
+                      const userData = await meRes.json();
+                      setUser(userData);
+                      await AsyncStorage.setItem("@zerorisco_user", JSON.stringify(userData));
+                    } else {
+                      setUser(JSON.parse(storedUser));
+                    }
+                  } catch {
+                    setUser(JSON.parse(storedUser));
+                  }
                 } else {
                   await logout();
                 }
