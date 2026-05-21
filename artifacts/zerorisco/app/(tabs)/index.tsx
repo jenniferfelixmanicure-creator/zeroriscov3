@@ -89,6 +89,26 @@ import { router } from "expo-router";
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Switch to passenger mode */}
+          <Pressable
+            onPress={() => router.replace("/(passenger)")}
+            style={[styles.switchCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+          >
+            <View style={[styles.switchIcon, { backgroundColor: "#00FF9D22" }]}>
+              <Feather name="user" size={20} color="#00FF9D" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.switchTitle, { color: colors.foreground }]}>
+                Acessar como Passageiro
+              </Text>
+              <Text style={[styles.switchSubtitle, { color: colors.mutedForeground }]}>
+                Navegar pela experiência do passageiro
+              </Text>
+            </View>
+            <Feather name="arrow-right" size={18} color="#00FF9D" />
+          </Pressable>
+
+          {/* Web Panel CTA */}
           <Pressable
             onPress={openWebPanel}
             style={[styles.panelCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
@@ -113,6 +133,7 @@ import { router } from "expo-router";
             </View>
           </Pressable>
 
+          {/* Pending subscriptions */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
@@ -201,6 +222,7 @@ import { router } from "expo-router";
               ))}
           </View>
 
+          {/* Quick actions */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Ações Rápidas
@@ -254,7 +276,25 @@ import { router } from "expo-router";
     greeting: { fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 2 },
     title: { fontSize: 26, fontFamily: "Inter_700Bold" },
     logoutBtn: { padding: 10, borderRadius: 10, borderWidth: 1, marginTop: 4 },
-    content: { paddingHorizontal: 20, gap: 20 },
+    content: { paddingHorizontal: 20, gap: 16 },
+    switchCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      padding: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      borderColor: "#00FF9D44",
+    },
+    switchIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    switchTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
+    switchSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular" },
     panelCard: { borderRadius: 16, borderWidth: 1, padding: 18, overflow: "hidden" },
     panelRow: { flexDirection: "row", alignItems: "center", gap: 14 },
     panelIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
