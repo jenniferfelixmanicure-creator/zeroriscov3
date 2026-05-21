@@ -35,12 +35,14 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const soon = () => Alert.alert("Em breve", "Esta funcionalidade está sendo desenvolvida.");
+
   const menuItems: MenuItem[] = [
-    { icon: "user", label: "Editar perfil", onPress: () => {} },
-    { icon: "shield", label: "Segurança", onPress: () => {} },
-    { icon: "bell", label: "Notificações", onPress: () => {} },
-    { icon: "help-circle", label: "Suporte", onPress: () => {} },
-    { icon: "star", label: "Avaliar o app", onPress: () => {} },
+    { icon: "user", label: "Editar perfil", onPress: soon },
+    { icon: "shield", label: "Segurança", onPress: soon },
+    { icon: "bell", label: "Notificações", onPress: soon },
+    { icon: "help-circle", label: "Suporte", onPress: () => Alert.alert("Suporte", "Entre em contato: suporte@zerorisco.app") },
+    { icon: "star", label: "Avaliar o app", onPress: soon },
     { icon: "log-out", label: "Sair", onPress: handleLogout, danger: true },
   ];
 
