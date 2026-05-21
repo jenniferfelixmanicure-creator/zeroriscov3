@@ -46,11 +46,16 @@
           "locationAlwaysAndWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo.",
           "locationWhenInUsePermission": "ZeroRisco precisa da sua localização para conectar você ao motorista mais próximo."
         }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": ""
+        }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "eas": {
