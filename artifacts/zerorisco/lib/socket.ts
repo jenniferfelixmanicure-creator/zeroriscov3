@@ -1,49 +1,44 @@
 import { io, Socket } from 'socket.io-client';
 
-let socket: Socket;
+const socket: Socket = io(`https://${process.env.EXPO_PUBLIC_DOMAIN}`, {
+  transports: ['websocket'],
+  autoConnect: false,
+});
 
-export const initSocket = (token: string) => {
-  if (!socket) {
-    socket = io(`https://${process.env.EXPO_PUBLIC_DOMAIN}`, {
-      auth: {
-        token,
-      },
-      transports: ['websocket'],
-    });
+socket.on('connect', () => {
+  console.log('Conectado ao Socket.IO');
+});
 
-    socket.on('connect', () => {
-      console.log('Conectado ao Socket.IO');
-    });
+socket.on('disconnect', () => {
+  console.log('Desconectado do Socket.IO');
+});
 
-    socket.on('disconnect', () => {
-      console.log('Desconectado do Socket.IO');
-    });
+socket.on('connect_error', (err) => {
+  console.warn('Erro de conexão Socket.IO:', err.message);
+});
+
+export { socket };
+
+export const initSocket = (token?: string) => {
+  if (!socket.connected) {
+    if (token) {
+      socket.auth = { token };
+    }
+    socket.connect();
   }
   return socket;
 };
 
-export const getSocket = () => {
-  if (!socket) {
-    console.warn('Socket não inicializado!');
-  }
-  return socket;
-};
+export const getSocket = () => socket;
 
 export const joinRideRoom = (rideId: number) => {
-  if (socket) {
-    socket.emit('join_ride', String(rideId));
-  }
+  socket.emit('join_ride', String(rideId));
 };
 
 export const joinUserRoom = (userId: number) => {
-  if (socket) {
-    socket.emit('join_user', String(userId));
-  }
+  socket.emit('join_user', String(userId));
 };
 
 export const disconnectSocket = () => {
-  if (socket) {
-    socket.disconnect();
-    (socket as any) = null;
-  }
+  socket.disconnect();
 };
