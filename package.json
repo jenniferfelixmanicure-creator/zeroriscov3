@@ -16,5 +16,10 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "expo-router@6.0.23": "patches/expo-router@6.0.23.patch"
+    }
   }
 }

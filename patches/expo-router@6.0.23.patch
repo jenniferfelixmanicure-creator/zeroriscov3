@@ -1,0 +1,62 @@
+diff --git a/_ctx-html.js b/_ctx-html.js
+index 446f6ddab416979687609390adb85ab50273339f..47b0ece32f26d692a92e2e82be068bf37f225f25 100644
+--- a/_ctx-html.js
++++ b/_ctx-html.js
+@@ -1,6 +1,6 @@
+ /** Optionally import `app/+html.js` file. */
+ export const ctx = require.context(
+-  process.env.EXPO_ROUTER_APP_ROOT,
++  './app',
+   false,
+   /\+html\.[tj]sx?$/,
+   'sync'
+diff --git a/_ctx.android.js b/_ctx.android.js
+index 1afb1f817e82fe371866ea51872006b5dc0da4a5..6337fb5f0df4ce5344b1cdd16f4743b34ecaa3ec 100644
+--- a/_ctx.android.js
++++ b/_ctx.android.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+-  process.env.EXPO_ROUTER_APP_ROOT,
++  './app',
+   true,
+   /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+middleware)))\.[tj]sx?$).*(?:\.ios|\.web)?\.[tj]sx?$/,
+-  process.env.EXPO_ROUTER_IMPORT_MODE
++  'sync'
+ );
+diff --git a/_ctx.ios.js b/_ctx.ios.js
+index b30ee6c249cd8bb22ec7644c89202881004f2d83..0da25cf23bcc385946a980c8853139f7b18ff395 100644
+--- a/_ctx.ios.js
++++ b/_ctx.ios.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+-  process.env.EXPO_ROUTER_APP_ROOT,
++  './app',
+   true,
+   /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+middleware)))\.[tj]sx?$).*(?:\.android|\.web)?\.[tj]sx?$/,
+-  process.env.EXPO_ROUTER_IMPORT_MODE
++  'sync'
+ );
+diff --git a/_ctx.js b/_ctx.js
+index 0979e39c71aabfade7ec09f69f893044fe2ff35f..2aa5f26c099cb7d94ff00f4e091ab967a134d6a6 100644
+--- a/_ctx.js
++++ b/_ctx.js
+@@ -1,5 +1,5 @@
+ export const ctx = require.context(
+-  process.env.EXPO_ROUTER_APP_ROOT,
++  './app',
+   true,
+   // Ignore root `./+html.js` and API route files `./generate+api.tsx`.
+   /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)))\.[tj]sx?$).*\.[tj]sx?$/
+diff --git a/_ctx.web.js b/_ctx.web.js
+index 8061699188ad92137c40ab0228a381b736f5d35c..a557a05c109fa794d86bf95fbd6dbedfa7a1fc95 100644
+--- a/_ctx.web.js
++++ b/_ctx.web.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+-  process.env.EXPO_ROUTER_APP_ROOT,
++  './app',
+   true,
+   /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+middleware)|(?:\+(html|native-intent))))\.[tj]sx?$).*(?:\.android|\.ios|\.native)?\.[tj]sx?$/,
+-  process.env.EXPO_ROUTER_IMPORT_MODE
++  'sync'
+ );
