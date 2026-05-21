@@ -20,11 +20,10 @@ import { Server } from "socket.io";
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  // Mapa de debounce para não sobrecarregar o banco a cada update de localização
   const dbUpdateDebounce = new Map<number, ReturnType<typeof setTimeout>>();
 
   async function persistDriverLocation(driverId: number, lat: number, lng: number) {
-    if (dbUpdateDebounce.has(driverId)) return; // throttle: 1 write per 30s per driver
+    if (dbUpdateDebounce.has(driverId)) return;
     const timer = setTimeout(() => dbUpdateDebounce.delete(driverId), 30_000);
     dbUpdateDebounce.set(driverId, timer);
     try {
@@ -54,7 +53,6 @@ import { Server } from "socket.io";
         socket.join(`category_${data.categoryId}`);
       });
 
-      // FIX: localização enviada APENAS para participantes da corrida + persiste no banco (throttled)
       socket.on("driver_location", (data: {
         driverId: number;
         rideId?: number;
@@ -69,7 +67,6 @@ import { Server } from "socket.io";
             categoryId: data.categoryId ?? 0,
             updatedAt: Date.now(),
           });
-          // Persiste no banco a cada 30s para sobreviver a reconexões
           void persistDriverLocation(data.driverId, data.lat, data.lng);
         }
         if (data.rideId) {
@@ -82,14 +79,29 @@ import { Server } from "socket.io";
       });
 
       socket.on("send_message", async (data: { rideId: number; senderId: number; text: string }) => {
-        io.to(`ride_${data.rideId}`).emit("new_message", data);
+        const normalizedMsg = {
+          rideId: data.rideId,
+          senderId: data.senderId,
+          senderName: "Usuário",
+          content: data.text,
+          text: data.text,
+          createdAt: new Date().toISOString(),
+        };
+        io.to(`ride_${data.rideId}`).emit("new_message", normalizedMsg);
+
         const lower = data.text.toLowerCase();
         if (lower.includes("ajuda") || lower.includes("ia") || lower.includes("zerorisco")) {
-          const aiResponse = await askZeroRisco(data.text, `Corrida ID: ${data.rideId}`);
-          io.to(`ride_${data.rideId}`).emit("new_message", {
-            rideId: data.rideId, senderId: 0, senderName: "IA ZeroRisco",
-            text: aiResponse, createdAt: new Date().toISOString(),
-          });
+          try {
+            const aiResponse = await askZeroRisco(data.text, `Corrida ID: ${data.rideId}`);
+            io.to(`ride_${data.rideId}`).emit("new_message", {
+              rideId: data.rideId,
+              senderId: 0,
+              senderName: "IA ZeroRisco",
+              content: aiResponse,
+              text: aiResponse,
+              createdAt: new Date().toISOString(),
+            });
+          } catch { /* IA indisponível, ignora */ }
         }
       });
 
@@ -110,12 +122,11 @@ import { Server } from "socket.io";
     return io;
   }
 
-  // Retorna motoristas online próximos (em memória + fallback DB se mapa vazio)
   export function getNearbyDriversFromMemory(lat: number, lng: number, radiusKm: number, categoryIds?: number[]) {
     const now = Date.now();
     const results: Array<{ driverId: number; lat: number; lng: number; distKm: number; categoryId: number }> = [];
     for (const [driverId, loc] of driverLocations.entries()) {
-      if (now - loc.updatedAt > 5 * 60_000) continue; // ignora localizações > 5 min antigas
+      if (now - loc.updatedAt > 5 * 60_000) continue;
       if (categoryIds && !categoryIds.includes(loc.categoryId)) continue;
       const dist = haversineKm(lat, lng, loc.lat, loc.lng);
       if (dist <= radiusKm) results.push({ driverId, lat: loc.lat, lng: loc.lng, distKm: Math.round(dist * 10) / 10, categoryId: loc.categoryId });
@@ -123,7 +134,6 @@ import { Server } from "socket.io";
     return results.sort((a, b) => a.distKm - b.distKm);
   }
 
-  // Matching inteligente: motorista mais próximo recebe a corrida com 30s de vantagem
   export function notifyDriversForRide(allowedCategoryIds: number[], rideLat: number, rideLng: number, ride: object) {
     const ioInst = getIO();
     const eligible: Array<{ driverId: number; distKm: number }> = [];
@@ -157,4 +167,3 @@ import { Server } from "socket.io";
   export function emitToUser(userId: number | string, event: string, data: unknown) {
     if (io) io.to(`user_${userId}`).emit(event, data);
   }
-  
