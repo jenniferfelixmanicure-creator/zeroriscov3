@@ -1,8 +1,11 @@
 import { io, Socket } from 'socket.io-client';
 
 const socket: Socket = io(`https://${process.env.EXPO_PUBLIC_DOMAIN}`, {
-  transports: ['websocket'],
+  transports: ['websocket', 'polling'],
   autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
 });
 
 socket.on('connect', () => {

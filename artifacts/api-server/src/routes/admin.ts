@@ -113,13 +113,33 @@ router.get("/admin/panel", (_req, res): void => {
 let pwd = "";
 
 function doLogin() {
+  const errEl = document.getElementById("loginErr");
+  const btn = document.querySelector(".login-box .btn");
   pwd = document.getElementById("pwdInput").value;
+  if (!pwd) { errEl.textContent = "Digite a senha."; errEl.style.display = "block"; return; }
+  errEl.style.display = "none";
+  if (btn) btn.textContent = "Entrando...";
   fetch("/api/admin/drivers?status=pending", { headers: { "x-admin-password": pwd } })
     .then(r => {
-      if (r.status === 401) { document.getElementById("loginErr").style.display="block"; return; }
+      if (btn) btn.textContent = "Entrar";
+      if (r.status === 401) {
+        errEl.textContent = "Senha incorreta. Verifique a variável ADMIN_PASSWORD no servidor.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (!r.ok) {
+        errEl.textContent = "Erro no servidor (" + r.status + "). Tente novamente.";
+        errEl.style.display = "block";
+        return;
+      }
       document.getElementById("loginWrap").style.display = "none";
       document.getElementById("mainPanel").style.display = "block";
       loadTab("pending");
+    })
+    .catch(err => {
+      if (btn) btn.textContent = "Entrar";
+      errEl.textContent = "Falha de conexão com o servidor. Verifique se o backend está online.";
+      errEl.style.display = "block";
     });
 }
 
