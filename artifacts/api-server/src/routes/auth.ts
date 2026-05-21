@@ -12,7 +12,6 @@ import { Router, type IRouter } from "express";
   const UPLOADS_DIR = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-  // CPF do administrador master — sempre recebe role admin
   const ADMIN_CPF = "15365092724";
 
   function resolveRole(cpf: string, requestedRole: string): string {
@@ -48,6 +47,7 @@ import { Router, type IRouter } from "express";
     const [user] = await db.insert(usersTable).values({ name, cpf: rawCpf, phone, passwordHash, role: finalRole }).returning();
 
     let approvalStatus = "approved";
+    let subscriptionStatus = "inactive";
     if (finalRole === "driver") {
       approvalStatus = "pending";
       let cnhUrl: string | undefined;
@@ -67,7 +67,7 @@ import { Router, type IRouter } from "express";
 
     res.status(201).json({
       token, refreshToken,
-      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
+      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, subscriptionStatus, createdAt: user.createdAt.toISOString() },
     });
   });
 
@@ -82,17 +82,20 @@ import { Router, type IRouter } from "express";
     }
     if (!user.isActive) { res.status(403).json({ error: "Conta desativada. Entre em contato com o suporte." }); return; }
 
-    // CPF admin sempre retorna role admin — corrige caso o registro tenha sido feito com outro role
     const finalRole = resolveRole(rawCpf, user.role);
     if (finalRole !== user.role) {
       await db.update(usersTable).set({ role: finalRole }).where(eq(usersTable.id, user.id));
     }
 
     let approvalStatus = "approved";
+    let subscriptionStatus = "inactive";
     if (finalRole === "driver") {
-      const [profile] = await db.select({ approvalStatus: driverProfilesTable.approvalStatus })
-        .from(driverProfilesTable).where(eq(driverProfilesTable.userId, user.id));
+      const [profile] = await db
+        .select({ approvalStatus: driverProfilesTable.approvalStatus, subscriptionStatus: driverProfilesTable.subscriptionStatus })
+        .from(driverProfilesTable)
+        .where(eq(driverProfilesTable.userId, user.id));
       approvalStatus = profile?.approvalStatus ?? "pending";
+      subscriptionStatus = profile?.subscriptionStatus ?? "inactive";
     }
 
     const token = signToken({ userId: user.id, role: finalRole });
@@ -102,7 +105,7 @@ import { Router, type IRouter } from "express";
 
     res.json({
       token, refreshToken,
-      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() },
+      user: { id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, subscriptionStatus, createdAt: user.createdAt.toISOString() },
     });
   });
 
@@ -143,14 +146,17 @@ import { Router, type IRouter } from "express";
 
     const finalRole = resolveRole(user.cpf ?? "", user.role);
     let approvalStatus = "approved";
+    let subscriptionStatus = "inactive";
     if (finalRole === "driver") {
-      const [profile] = await db.select({ approvalStatus: driverProfilesTable.approvalStatus })
-        .from(driverProfilesTable).where(eq(driverProfilesTable.userId, user.id));
+      const [profile] = await db
+        .select({ approvalStatus: driverProfilesTable.approvalStatus, subscriptionStatus: driverProfilesTable.subscriptionStatus })
+        .from(driverProfilesTable)
+        .where(eq(driverProfilesTable.userId, user.id));
       approvalStatus = profile?.approvalStatus ?? "pending";
+      subscriptionStatus = profile?.subscriptionStatus ?? "inactive";
     }
 
-    res.json({ id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, createdAt: user.createdAt.toISOString() });
+    res.json({ id: user.id, name: user.name, cpf: user.cpf, phone: user.phone, role: finalRole, avatarUrl: user.avatarUrl, approvalStatus, subscriptionStatus, createdAt: user.createdAt.toISOString() });
   });
 
   export default router;
-  
