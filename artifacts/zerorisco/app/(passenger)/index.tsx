@@ -196,6 +196,7 @@ export default function PassengerHome() {
           ].map((item) => (
             <Pressable
               key={item.label}
+              onPress={() => Alert.alert("Em breve", "Esta funcionalidade está sendo desenvolvida.")}
               style={[styles.quickBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
             >
               <Feather name={item.icon} size={18} color={colors.primary} />
