@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "lucide-react-native": "^1.16.0",
-    "maplibre-gl": "^11.0.0",
+    "maplibre-gl": "^5.0.0",
     "react-native-maps": "^1.27.2",
     "socket.io-client": "^4.8.3"
   }
