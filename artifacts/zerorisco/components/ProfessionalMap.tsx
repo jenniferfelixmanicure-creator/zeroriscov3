@@ -12,6 +12,7 @@ interface ProfessionalMapProps {
   origin?: Coordinate;
   destination?: Coordinate;
   driverLocation?: Coordinate;
+  userLocation?: Coordinate;
   routeCoordinates?: Coordinate[];
   onRegionChange?: (region: any) => void;
 }

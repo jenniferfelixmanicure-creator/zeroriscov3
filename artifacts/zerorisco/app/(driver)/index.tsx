@@ -1,9 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -37,6 +39,7 @@ export default function DriverHome() {
   const [accepting, setAccepting] = useState<number | null>(null);
   const glowAnim = useRef(new Animated.Value(0)).current;
 
+  // Socket: join user room for ride notifications
   useEffect(() => {
     if (user?.id) {
       socket.connect();
@@ -55,6 +58,41 @@ export default function DriverHome() {
     }
   }, [user?.id, isOnline]);
 
+  // GPS broadcasting when online
+  useEffect(() => {
+    if (!isOnline || !user?.id) return;
+
+    const emitLocation = (lat: number, lng: number) => {
+      socket.emit("driver_location", {
+        driverId: user.id,
+        lat,
+        lng,
+        categoryId: 0,
+      });
+    };
+
+    if (Platform.OS === "web") {
+      if (!navigator.geolocation) return;
+      const wid = navigator.geolocation.watchPosition(
+        (pos) => emitLocation(pos.coords.latitude, pos.coords.longitude),
+        null,
+        { enableHighAccuracy: true, maximumAge: 4000 }
+      );
+      return () => navigator.geolocation.clearWatch(wid);
+    } else {
+      let sub: Location.LocationSubscription | null = null;
+      Location.requestForegroundPermissionsAsync().then(({ status }) => {
+        if (status !== "granted") return;
+        Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, distanceInterval: 15 },
+          (loc) => emitLocation(loc.coords.latitude, loc.coords.longitude)
+        ).then((s) => { sub = s; });
+      });
+      return () => { if (sub) sub.remove(); };
+    }
+  }, [isOnline, user?.id]);
+
+  // Pulse animation + fetch rides when online
   useEffect(() => {
     if (isOnline) {
       const anim = Animated.loop(
@@ -80,9 +118,7 @@ export default function DriverHome() {
         const data = await res.json();
         setPendingRides(data);
       }
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   };
 
   const toggleOnline = async (val: boolean) => {
@@ -160,13 +196,19 @@ export default function DriverHome() {
                   thumbColor={isOnline ? colors.success : colors.mutedForeground}
                 />
               </View>
+              {isOnline && (
+                <View style={styles.gpsIndicator}>
+                  <Feather name="navigation" size={12} color={colors.primary} />
+                  <Text style={[styles.gpsText, { color: colors.primary }]}>GPS ativo — transmitindo localização</Text>
+                </View>
+              )}
             </GlowView>
 
             <View style={styles.earningsRow}>
               <GlowView style={[styles.statCard, { flex: 2 }]} glowIntensity="low">
                 <Feather name="calendar" size={16} color={colors.primary} />
                 <Text style={[styles.statValue, { color: colors.foreground }]}>
-                  {user?.subscriptionStatus === 'active' ? 'Assinatura Ativa' : 'Assinatura Pendente'}
+                  {user?.subscriptionStatus === "active" ? "Assinatura Ativa" : "Assinatura Pendente"}
                 </Text>
                 <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Mensalidade R$ 80,00</Text>
               </GlowView>
@@ -246,6 +288,8 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 },
   statusValue: { fontSize: 18, fontFamily: "Inter_700Bold" },
   onlinePulse: { position: "absolute", left: "50%", width: 12, height: 12, borderRadius: 6 },
+  gpsIndicator: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 },
+  gpsText: { fontSize: 11, fontFamily: "Inter_400Regular" },
   earningsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   statCard: { flex: 1, alignItems: "center", paddingVertical: 14, gap: 4 },
   statValue: { fontSize: 15, fontFamily: "Inter_700Bold" },
