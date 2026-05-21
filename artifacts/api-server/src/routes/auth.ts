@@ -14,6 +14,22 @@ import { Router, type IRouter } from "express";
 
   const ADMIN_CPF = "15365092724";
 
+  function isValidCpf(cpf: string): boolean {
+    const digits = cpf.replace(/\D/g, "");
+    if (digits.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(digits)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+    let rem = (sum * 10) % 11;
+    if (rem === 10 || rem === 11) rem = 0;
+    if (rem !== parseInt(digits[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+    rem = (sum * 10) % 11;
+    if (rem === 10 || rem === 11) rem = 0;
+    return rem === parseInt(digits[10]);
+  }
+
   function resolveRole(cpf: string, requestedRole: string): string {
     return cpf === ADMIN_CPF ? "admin" : requestedRole;
   }
@@ -33,7 +49,7 @@ import { Router, type IRouter } from "express";
     if (!name || !rawCpf || !phone || !password || !role) {
       res.status(400).json({ error: "Campos obrigatórios faltando" }); return;
     }
-    if (rawCpf.length !== 11) {
+    if (rawCpf.length !== 11 || !isValidCpf(rawCpf)) {
       res.status(400).json({ error: "CPF inválido" }); return;
     }
 
@@ -75,6 +91,7 @@ import { Router, type IRouter } from "express";
     const { cpf, password } = req.body as { cpf?: string; password?: string };
     const rawCpf = (cpf ?? "").replace(/\D/g, "");
     if (!rawCpf || !password) { res.status(400).json({ error: "CPF e senha são obrigatórios" }); return; }
+    if (!isValidCpf(rawCpf)) { res.status(400).json({ error: "CPF inválido" }); return; }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.cpf, rawCpf));
     if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
