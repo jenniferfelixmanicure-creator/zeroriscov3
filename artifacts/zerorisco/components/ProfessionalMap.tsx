@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
-import * as Location from 'expo-location';
+import { StyleSheet, View } from 'react-native';
+import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
+
+const driverIcon = require('../assets/images/icon.png');
 
 interface Coordinate {
   latitude: number;
@@ -52,9 +53,7 @@ const ProfessionalMap: React.FC<ProfessionalMapProps> = ({
         onRegionChangeComplete={onRegionChange}
         showsUserLocation
         showsMyLocationButton={false}
-        customMapStyle={darkMapStyle}
       >
-        {/* Usando OpenStreetMap Tiles para evitar custos de API do Google */}
         <UrlTile
           urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maximumZ={19}
@@ -81,7 +80,7 @@ const ProfessionalMap: React.FC<ProfessionalMapProps> = ({
           <Marker
             coordinate={driverLocation}
             title="Motorista"
-            image={require('../assets/images/icon.png')} // Idealmente um ícone de carro
+            image={driverIcon}
           />
         )}
 
@@ -96,31 +95,6 @@ const ProfessionalMap: React.FC<ProfessionalMapProps> = ({
     </View>
   );
 };
-
-const darkMapStyle = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#060D1A" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#4E7090" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#060D1A" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#1A3050" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#0A1628" }]
-  }
-];
 
 const styles = StyleSheet.create({
   container: {
