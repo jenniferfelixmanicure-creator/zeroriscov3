@@ -4,14 +4,12 @@ import React, { useState } from "react";
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { PremiumButton } from "@/components/PremiumButton";
 import { PremiumInput } from "@/components/PremiumInput";
 import { useAuth } from "@/context/AuthContext";
@@ -100,11 +98,7 @@ export default function LoginScreen() {
         style={styles.topGlow}
         pointerEvents="none"
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
+      <KeyboardAwareScrollViewCompat
           contentContainerStyle={[
             styles.scroll,
             { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 },
@@ -163,8 +157,7 @@ export default function LoginScreen() {
               style={{ marginTop: 12 }}
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollViewCompat>
     </View>
   );
 }
