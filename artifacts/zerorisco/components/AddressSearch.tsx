@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -31,6 +31,10 @@ interface Props {
 export function AddressSearch({ placeholder, value, onSelect, icon = "map-pin", iconColor }: Props) {
   const colors = useColors();
   const [query, setQuery] = useState(value);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -82,7 +86,7 @@ export function AddressSearch({ placeholder, value, onSelect, icon = "map-pin", 
   }, []);
 
   const handleSelect = (item: Suggestion) => {
-    setQuery(item.name);
+    setQuery(item.display_name || item.name);
     setSuggestions([]);
     setFocused(false);
     Keyboard.dismiss();
