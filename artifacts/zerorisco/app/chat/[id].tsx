@@ -25,6 +25,15 @@ interface Message {
   createdAt: string;
 }
 
+interface SocketMessage {
+  rideId?: number;
+  senderId: number;
+  senderName?: string;
+  content?: string;
+  text?: string;
+  createdAt?: string;
+}
+
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -34,15 +43,23 @@ export default function ChatScreen() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const flatRef = useRef<FlatList>(null);
+  const msgIdCounter = useRef(Date.now());
 
   useEffect(() => {
     fetchMessages();
-    
+
     socket.connect();
     socket.emit("join_ride", id);
 
-    socket.on("new_message", (msg: Message) => {
-      setMessages(prev => [msg, ...prev]);
+    socket.on("new_message", (msg: SocketMessage) => {
+      const normalized: Message = {
+        id: msgIdCounter.current++,
+        senderId: msg.senderId,
+        senderName: msg.senderName ?? "Usuário",
+        content: msg.content ?? msg.text ?? "",
+        createdAt: msg.createdAt ?? new Date().toISOString(),
+      };
+      setMessages(prev => [normalized, ...prev]);
     });
 
     return () => {
@@ -58,7 +75,7 @@ export default function ChatScreen() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.reverse()); // Inverter para exibir na ordem correta da FlatList
+        setMessages(data.reverse());
       }
     } catch {
       // ignore
@@ -69,15 +86,13 @@ export default function ChatScreen() {
     if (!text.trim() || sending) return;
     const content = text.trim();
     setText("");
-    
-    // Enviar via Socket para tempo real e resposta da IA
+
     socket.emit("send_message", {
       rideId: Number(id),
       senderId: user?.id,
-      text: content
+      text: content,
     });
 
-    // Também salvar no banco via API para histórico
     try {
       await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/messages/${id}`, {
         method: "POST",
@@ -96,7 +111,6 @@ export default function ChatScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
@@ -113,7 +127,7 @@ export default function ChatScreen() {
         <FlatList
           ref={flatRef}
           data={messages}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           inverted
           contentContainerStyle={styles.messageList}
           showsVerticalScrollIndicator={false}
@@ -156,7 +170,6 @@ export default function ChatScreen() {
           }}
         />
 
-        {/* Input */}
         <View
           style={[
             styles.inputBar,
