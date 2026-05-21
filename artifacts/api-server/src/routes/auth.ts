@@ -150,6 +150,21 @@ import { Router, type IRouter } from "express";
     }
   });
 
+  router.post("/auth/reset-password", async (req, res): Promise<void> => {
+    const { cpf, phone, newPassword } = req.body as { cpf?: string; phone?: string; newPassword?: string };
+    const rawCpf = (cpf ?? "").replace(/\D/g, "");
+    if (!rawCpf || !phone || !newPassword || newPassword.length < 6) {
+      res.status(400).json({ error: "Preencha CPF, telefone e a nova senha (mínimo 6 caracteres)." }); return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.cpf, rawCpf));
+    if (!user || user.phone !== phone) {
+      res.status(404).json({ error: "CPF e telefone não conferem com nenhuma conta cadastrada." }); return;
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+    res.json({ success: true });
+  });
+
   router.post("/auth/logout", requireAuth, async (req, res): Promise<void> => {
     const { userId } = getUser(req);
     await db.update(usersTable).set({ refreshToken: null }).where(eq(usersTable.id, userId));
